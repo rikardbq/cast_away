@@ -1,15 +1,16 @@
+use fcast_sender_sdk::device::DeviceInfo;
 use serde::{Deserialize, Serialize};
 use winit::{
     application::ApplicationHandler,
-    event::{WindowEvent},
-    event_loop::{ActiveEventLoop, EventLoopProxy},
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy},
     platform::windows::IconExtWindows,
     window::{Icon, Window, WindowAttributes, WindowId},
 };
 use wry::{WebView, WebViewBuilder};
 // use x_win::get_open_windows;
 
-use crate::{HOST, IPC_HANDLER_INIT_SCRIPT, PORT, ROOT_DIR};
+use crate::{HOST, IPC_HANDLER_INIT_SCRIPT, PORT, ROOT_DIR, get_or_default_env};
 
 #[derive(Deserialize)]
 struct IpcRequest {
@@ -27,6 +28,7 @@ struct IpcResponse {
 #[derive(Debug)]
 pub enum UserEvents {
     ExecEval(String),
+    DeviceAvailable(DeviceInfo),
 }
 
 pub struct WebConfig {
@@ -35,10 +37,10 @@ pub struct WebConfig {
 }
 
 impl WebConfig {
-    pub fn default() -> Self {
-        WebConfig {
-            hostname: HOST.to_string(),
-            port: PORT.parse::<usize>().unwrap(),
+    pub fn new(hostname: String, port: String) -> Self {
+        Self {
+            hostname,
+            port: port.parse::<usize>().unwrap(),
         }
     }
     pub fn set_hostname(&mut self, hostname: String) {
@@ -49,19 +51,31 @@ impl WebConfig {
     }
 }
 
-#[derive(Default)]
 pub struct App {
+    event_loop_proxy: EventLoopProxy<UserEvents>,
+    web_config: WebConfig,
     window: Option<Window>,
     webview: Option<WebView>,
-    event_loop_proxy: Option<EventLoopProxy<UserEvents>>,
     window_attributes: Option<WindowAttributes>,
     initialization_script: Option<&'static str>,
-    web_config: Option<WebConfig>,
 }
 
 impl App {
+    pub fn new(host: String, port: String, event_loop: &EventLoop<UserEvents>) -> Self {
+        Self {
+            event_loop_proxy: event_loop.create_proxy(),
+            web_config: WebConfig::new(host, port),
+            window: None,
+            webview: None,
+            window_attributes: None,
+            initialization_script: None,
+        }
+    }
     pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy<UserEvents>) {
-        self.event_loop_proxy = Some(proxy);
+        self.event_loop_proxy = proxy;
+    }
+    pub fn set_web_config(&mut self, web_config: WebConfig) {
+        self.web_config = web_config;
     }
     pub fn set_window_attributes(&mut self, attributes: WindowAttributes) {
         self.window_attributes = Some(attributes);
@@ -69,17 +83,10 @@ impl App {
     pub fn set_initialization_script(&mut self, script: &'static str) {
         self.initialization_script = Some(script);
     }
-    pub fn set_web_config(&mut self, web_config: WebConfig) {
-        self.web_config = Some(web_config);
-    }
 }
 
 impl ApplicationHandler<UserEvents> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let web_config = match &self.web_config {
-            Some(conf) => conf,
-            None => &WebConfig::default(),
-        };
         let win_attr = self
             .window_attributes
             .to_owned()
@@ -92,26 +99,21 @@ impl ApplicationHandler<UserEvents> for App {
         let mut webview_builder = WebViewBuilder::new()
             .with_url(format!(
                 "http://{}:{}",
-                web_config.hostname, web_config.port
+                self.web_config.hostname, self.web_config.port
             ))
             .with_initialization_script(IPC_HANDLER_INIT_SCRIPT);
 
-        if let Some(proxy) = &self.event_loop_proxy {
-            let proxy = proxy.clone();
-            webview_builder = webview_builder.with_ipc_handler(move |req| {
-                let msg = req.body().to_string();
-                proxy
-                    .send_event(UserEvents::ExecEval(msg))
-                    .expect("Failed to send event");
-            })
-        }
-
+        let proxy_clone = self.event_loop_proxy.clone();
+        webview_builder = webview_builder.with_ipc_handler(move |req| {
+            let msg = req.body().to_string();
+            proxy_clone
+                .send_event(UserEvents::ExecEval(msg))
+                .expect("Failed to send event");
+        });
         if let Some(script) = self.initialization_script {
             webview_builder = webview_builder.with_initialization_script(script);
         }
-
         let webview = webview_builder.build(&window).unwrap();
-
         self.window = Some(window);
         self.webview = Some(webview);
     }
@@ -120,7 +122,6 @@ impl ApplicationHandler<UserEvents> for App {
         match event {
             UserEvents::ExecEval(msg) => {
                 let req: IpcRequest = serde_json::from_str(&msg).unwrap();
-
                 let result = match req.method.as_str() {
                     "list_files" => {
                         let files: Vec<String> = std::fs::read_dir(".")
@@ -148,7 +149,8 @@ impl ApplicationHandler<UserEvents> for App {
                     .unwrap()
                     .evaluate_script(&format!("window.ipc_handler.responseHandler({});", json))
                     .unwrap();
-            } // _ => ()
+            }
+            _ => ()
         }
     }
 

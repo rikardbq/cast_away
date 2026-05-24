@@ -1,3 +1,5 @@
+use std::env;
+
 pub mod application;
 
 pub const HOST: &str = "127.0.0.1";
@@ -226,3 +228,7 @@ style.innerHTML = `
 `;
 document.head.appendChild(style);
 "#;
+
+pub fn get_or_default_env(env_var: &str, default: &str) -> String {
+    env::var(env_var).unwrap_or(default.to_string())
+}

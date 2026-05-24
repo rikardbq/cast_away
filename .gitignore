@@ -1,12 +1,13 @@
 .vscode/
 .idea/
-node_modules/
-dist/
-dist-ssr/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
 target/
 assets/
+!frontend/src/assets/
 
-!.vscode/extensions.json
+# !.vscode/extensions.json
 .DS_Store
 *.suo
 *.ntvs*
