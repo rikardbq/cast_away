@@ -1,0 +1,61 @@
+
+// const rateLimiterCbTimer = useRef<number | undefined>(undefined);
+//     const rateLimiterExecuteTimer = useRef<number | undefined>(undefined);
+//     const rateLimiter = useCallback(
+//         (cb: Function, time: number = 250, identifier: GamepadButtons) => {
+//             clearTimeout(rateLimiterExecuteTimer.current);
+//             rateLimiterExecuteTimer.current = setTimeout(() => {
+//                 clearTimeout(rateLimiterCbTimer.current);
+//             }, time);
+
+//             const [controller, key] = identifier.split(".") as [
+//                 keyof typeof GAMEPAD_BUTTONS,
+//                 string,
+//             ];
+//             rateLimiterCbTimer.current = setTimeout(() => {
+//                 if (
+//                     typeof (GAMEPAD_BUTTONS[controller] as any)[key] ===
+//                     "number"
+//                 ) {
+//                     cb();
+//                 }
+//             }, time);
+//         },
+//         [],
+//     );
+
+//     const onButtonPressed = (button: GamepadButtons, cb: Function) => {
+//         gamepads.forEach((gp: Gamepad | null, _i: number) => {
+//             if (isButtonPressed(gp!, button)) {
+//                 rateLimiter(() => cb(gp), 100, button);
+//             }
+//         });
+//     };
+
+
+
+
+// const useRateLimit = () => {
+//     const id = useRef<number | undefined>(undefined);
+//     const timer = useRef<number | undefined>(undefined);
+//     const executeTimer = useRef<number | undefined>(undefined);
+//     const rateLimiter = useCallback(
+//         (cb: Function, time: number = 250, identifier: number = 0) => {
+//             clearTimeout(executeTimer.current);
+//             executeTimer.current = setTimeout(() => {
+//                 id.current = undefined;
+//                 clearTimeout(timer.current);
+//             }, time);
+
+//             id.current = identifier;
+//             timer.current = setTimeout(() => {
+//                 if (id.current === identifier) {
+//                     cb();
+//                 }
+//             }, time);
+//         },
+//         [],
+//     );
+
+//     return rateLimiter;
+// };
