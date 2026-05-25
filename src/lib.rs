@@ -3,7 +3,7 @@ use std::env;
 pub mod application;
 
 pub const HOST: &str = "127.0.0.1";
-pub const PORT: &str = "8000";
+pub const PORT: &str = "8090";
 pub const ROOT_DIR: &str = "assets";
 // pub const WEBVIEW_LOADED_SCRIPT: &str = r#"
 //     window.ipc.postMessage("Webview loaded!");

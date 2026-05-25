@@ -11,8 +11,15 @@ declare global {
     }
 }
 
+type IpcMethod =
+    | "listFiles"
+    | "discoverDevices"
+    | "connectToDevice"
+    | "disconnectFromDevice"
+    | "requestCastLocal";
+
 export const ipc = {
-    call(method: string, params = {}) {
+    call(method: IpcMethod, params = {}) {
         return new Promise((resolve) => {
             const id = window.ipc_handler.currRequestId++;
             window.ipc_handler.pendingRequests.set(id, resolve);

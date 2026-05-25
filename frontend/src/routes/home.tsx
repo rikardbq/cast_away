@@ -31,8 +31,24 @@ export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
     return (
         <div>
             {deviceNames.map((d) => (
-                <p key={d}>{d}</p>
+                <div>
+                    <button
+                        key={d}
+                        className="btn btn-success"
+                        onClick={() => {
+                            ipc.call("connectToDevice", {
+                                device_name: d,
+                            });
+                        }}
+                    >
+                        {d}
+                    </button>
+                </div>
             ))}
+            <button className="btn btn-success"
+                        onClick={() => {
+                            ipc.call("requestCastLocal");
+                        }}>Cast local</button>
             <p>{`pressed : ${gamepads[0]?.buttons[0].pressed}`}</p>
             <div>
                 <a href="https://vite.dev" target="_blank">
@@ -58,11 +74,9 @@ export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
             <button
                 className="btn btn-error"
                 onClick={async () => {
-                    const list = await ipc.call("list_files");
+                    const list = await ipc.call("listFiles");
                     console.log(list);
-                    const aa = await ipc.call("discover_devices");
-                    console.log(aa);
-                    
+                    await ipc.call("discoverDevices");
                 }}
             >
                 TESTING THIS IPC

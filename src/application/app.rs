@@ -1,18 +1,18 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use fcast_sender_sdk::{
-    DeviceDiscovererEventHandler,
+    DeviceDiscovererEventHandler, IpAddr,
     context::CastContext,
     device::{
-        DeviceConnectionState, DeviceEventHandler, DeviceInfo, KeyEvent, MediaEvent, PlaybackState,
-        Source,
+        CastingDevice, DeviceConnectionState, DeviceEventHandler, DeviceFeature, DeviceInfo,
+        EventSubscription, KeyEvent, LoadRequest, MediaEvent, PlaybackState, Source,
     },
 };
+use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use winit::{
     application::ApplicationHandler,
-    event::{Event, WindowEvent},
+    event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy},
     platform::windows::IconExtWindows,
     window::{Icon, Window, WindowAttributes, WindowId},
@@ -22,10 +22,22 @@ use wry::{WebView, WebViewBuilder};
 use crate::{IPC_HANDLER_INIT_SCRIPT, ROOT_DIR};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum IpcMethod {
+    ListFiles,
+    DiscoverDevices,
+    ConnectToDevice,
+    DisconnectFromDevice,
+    RequestCastLocal,
+    #[serde(other)]
+    Unknown,
+}
+
+#[derive(Deserialize)]
 struct IpcRequest {
     id: u64,
-    method: String,
-    params: serde_json::Value, // remember to check later...
+    method: IpcMethod,
+    params: serde_json::Value,
 }
 
 #[derive(Serialize)]
@@ -54,9 +66,14 @@ pub enum UserEvent {
     DeviceChanged(DeviceInfo),
     Connect(String),
     Disconnect,
-    FromDevice { id: usize, event: DeviceEvent },
-    CastLocalRequested,
-    CastLocal { media_type: String, handle: String },
+    FromDevice {
+        id: usize,
+        event: DeviceEvent,
+    },
+    CastLocal {
+        media_type: infer::Type,
+        handle: PathBuf,
+    },
     ChangeVolume(f64),
     Seek(f64),
 }
@@ -181,12 +198,22 @@ pub struct App {
     webview: Option<WebView>,
     window_attributes: Option<WindowAttributes>,
     initialization_script: Option<&'static str>,
+    // testing stuff
+    devices: Vec<DeviceInfo>,
+    active_device: Option<Arc<dyn CastingDevice>>,
+    current_device_id: usize,
+    local_adddress: IpAddr,
 }
 
 impl App {
     pub fn new(host: String, port: String, event_loop: &EventLoop<UserEvent>) -> Self {
         let cast_context = CastContext::new().unwrap();
         let event_proxy = event_loop.create_proxy();
+
+        let devices: Vec<DeviceInfo> = Vec::new();
+        let active_device: Option<Arc<dyn CastingDevice>> = None;
+        let current_device_id: usize = 0;
+        let local_adddress = IpAddr::v4(127, 0, 0, 1);
 
         Self {
             event_proxy: event_proxy,
@@ -196,6 +223,11 @@ impl App {
             webview: None,
             window_attributes: None,
             initialization_script: None,
+            // testing stuff
+            devices,
+            active_device,
+            current_device_id,
+            local_adddress,
         }
     }
     pub fn set_window_attributes(&mut self, attributes: WindowAttributes) {
@@ -246,8 +278,8 @@ impl ApplicationHandler<UserEvent> for App {
         match event {
             UserEvent::ExecEval(msg) => {
                 let req: IpcRequest = serde_json::from_str(&msg).unwrap();
-                let result = match req.method.as_str() {
-                    "list_files" => {
+                let result = match req.method {
+                    IpcMethod::ListFiles => {
                         let files: Vec<String> = std::fs::read_dir(".")
                             .unwrap()
                             .filter_map(|e| e.ok())
@@ -256,11 +288,55 @@ impl ApplicationHandler<UserEvent> for App {
 
                         Some(serde_json::to_value(files).unwrap())
                     }
-                    "discover_devices" => {
+                    IpcMethod::DiscoverDevices => {
                         let discovery_event_handler =
                             DiscoveryEventHandler::new(self.event_proxy.clone());
                         self.cast_context
                             .start_discovery(Arc::new(discovery_event_handler));
+
+                        None
+                    }
+                    IpcMethod::ConnectToDevice => {
+                        let device_name = req.params.get("device_name").unwrap();
+                        self.event_proxy
+                            .send_event(UserEvent::Connect(
+                                serde_json::from_value::<String>(device_name.clone()).unwrap(),
+                            ))
+                            .unwrap();
+                        None
+                    }
+                    IpcMethod::RequestCastLocal => {
+                        let file_path = FileDialog::new()
+                            .add_filter(
+                                "Media",
+                                &[
+                                    "png", "jpg", "jpeg", "avif", "mkv", "mp4", "webm", "flac",
+                                    "opus", "mp3", "mka", "m4a", "wav", "ogg", "vorbis", "apng",
+                                    "gif", "webp",
+                                ],
+                            )
+                            .add_filter("All", &["*"])
+                            .pick_file();
+                        if let Some(handle) = file_path {
+                            let event_proxy = self.event_proxy.clone();
+                            match infer::get_from_path(handle.clone()) {
+                                Ok(res) => match res {
+                                    Some(type_) => {
+                                        println!("{type_}");
+                                        event_proxy
+                                            .send_event(UserEvent::CastLocal {
+                                                media_type: type_,
+                                                handle,
+                                            })
+                                            .unwrap();
+                                    }
+                                    None => println!("Unable to get file type"),
+                                },
+                                Err(err) => {
+                                    println!("Failed to infer type of file: {err}");
+                                }
+                            };
+                        }
 
                         None
                     }
@@ -272,80 +348,138 @@ impl ApplicationHandler<UserEvent> for App {
                     .expect("Failed to evaluate script");
             }
             UserEvent::DeviceAvailable(device_info) => {
-                println!("{}", device_info.name);
+                self.devices.push(device_info.clone());
                 self.eval_script(&format!("window.postMessage('{}');", device_info.name))
                     .expect("Failed to evaluate script");
             }
-            // UserEvent::Connect(device_name) => {
-            //     if let Some(device_info) = devices
-            //         .iter()
-            //         .find(|device| device.name == device_name)
-            //         .cloned()
-            //     {
-            //         let device = self.cast_context.create_device_from_info(device_info);
-            //         device.connect(
-            //             None,
-            //             Arc::new(DevEventHandler::new(
-            //                 self.event_tx.clone(),
-            //                 current_device_id,
-            //             )),
-            //             1000,
-            //         )?;
-            //         active_device = Some(device);
-            //     }
-            // }
-            // UserEvent::FromDevice { id, event } => {
-            //     if id == current_device_id {
-            //         match event {
-            //             DeviceEvent::ConnectionStateChanged(state) => match state {
-            //                 DeviceConnectionState::Disconnected => (),
-            //                 DeviceConnectionState::Connecting => (),
-            //                 DeviceConnectionState::Reconnecting => {
-            //                     self.ui_weak.upgrade_in_event_loop(|ui| {
-            //                         ui.global::<Bridge>().set_state(State::Connecting);
-            //                     })?;
-            //                 }
-            //                 DeviceConnectionState::Connected { local_addr, .. } => {
-            //                     local_adddress = local_addr;
-            //                     self.ui_weak.upgrade_in_event_loop(|ui| {
-            //                         ui.global::<Bridge>().invoke_connected();
-            //                     })?;
-            //                     if let Some(active_device) = &active_device {
-            //                         if active_device
-            //                             .supports_feature(DeviceFeature::MediaEventSubscription)
-            //                         {
-            //                             let _ = active_device
-            //                                 .subscribe_event(EventSubscription::MediaItemEnd);
-            //                         }
-            //                     }
-            //                 }
-            //             },
-            //             DeviceEvent::VolumeChanged(volume) => {
-            //                 self.ui_weak.upgrade_in_event_loop(move |ui| {
-            //                     ui.global::<Bridge>().set_volume(volume as f32);
-            //                 })?
-            //             }
-            //             DeviceEvent::TimeChanged(time) => {
-            //                 self.ui_weak.upgrade_in_event_loop(move |ui| {
-            //                     ui.global::<Bridge>().set_playback_position(time as f32);
-            //                 })?
-            //             }
-            //             DeviceEvent::PlaybackStateChanged(state) => match state {
-            //                 PlaybackState::Idle => (),
-            //                 PlaybackState::Buffering => (),
-            //                 PlaybackState::Playing => (),
-            //                 PlaybackState::Paused => (),
-            //             },
-            //             DeviceEvent::DurationChanged(duration) => {
-            //                 self.ui_weak.upgrade_in_event_loop(move |ui| {
-            //                     ui.global::<Bridge>().set_playback_duration(duration as f32);
-            //                 })?
-            //             }
-            //             DeviceEvent::SpeedChanged(_) => (),
-            //             DeviceEvent::SourceChanged(source) => (),
-            //         }
-            //     }
-            // }
+            UserEvent::Connect(device_name) => {
+                if let Some(device_info) = self
+                    .devices
+                    .iter()
+                    .find(|device| device.name == device_name)
+                    .cloned()
+                {
+                    let device = self.cast_context.create_device_from_info(device_info);
+                    device
+                        .connect(
+                            None,
+                            Arc::new(DevEventHandler::new(
+                                self.event_proxy.clone(),
+                                self.current_device_id,
+                            )),
+                            1000,
+                        )
+                        .unwrap();
+                    self.active_device = Some(device);
+                }
+            }
+            UserEvent::FromDevice { id, event } => {
+                if id == self.current_device_id {
+                    match event {
+                        DeviceEvent::ConnectionStateChanged(state) => match state {
+                            DeviceConnectionState::Disconnected => (),
+                            DeviceConnectionState::Connecting => (),
+                            DeviceConnectionState::Reconnecting => {
+                                self.eval_script(&format!(
+                                    "window.postMessage('{}');",
+                                    "connecting"
+                                ))
+                                .expect("Failed to evaluate script");
+                            }
+                            DeviceConnectionState::Connected { local_addr, .. } => {
+                                self.local_adddress = local_addr;
+                                self.eval_script(&format!(
+                                    "window.postMessage('{}');",
+                                    "connected"
+                                ))
+                                .expect("Failed to evaluate script");
+                                if let Some(active_device) = &self.active_device {
+                                    if active_device
+                                        .supports_feature(DeviceFeature::MediaEventSubscription)
+                                    {
+                                        let _ = active_device
+                                            .subscribe_event(EventSubscription::MediaItemEnd);
+                                    }
+                                }
+                            }
+                        },
+                        DeviceEvent::VolumeChanged(volume) => {
+                            self.eval_script(&format!(
+                                "window.postMessage('{}');",
+                                format!("volume_changed:{}", volume)
+                            ))
+                            .expect("Failed to evaluate script");
+                        }
+                        DeviceEvent::TimeChanged(time) => {
+                            self.eval_script(&format!(
+                                "window.postMessage('{}');",
+                                format!("time_changed:{}", time)
+                            ))
+                            .expect("Failed to evaluate script");
+                        }
+                        DeviceEvent::PlaybackStateChanged(state) => match state {
+                            PlaybackState::Idle => (),
+                            PlaybackState::Buffering => (),
+                            PlaybackState::Playing => (),
+                            PlaybackState::Paused => (),
+                        },
+                        DeviceEvent::DurationChanged(duration) => {
+                            self.eval_script(&format!(
+                                "window.postMessage('{}');",
+                                format!("duration_changed:{}", duration)
+                            ))
+                            .expect("Failed to evaluate script");
+                        }
+                        DeviceEvent::SpeedChanged(_) => (),
+                        DeviceEvent::SourceChanged(source) => (),
+                    }
+                }
+            }
+            UserEvent::CastLocal { media_type, handle } => {
+                let matcher_type = media_type.matcher_type();
+                // if !matches!(
+                //     matcher_type,
+                //     infer::MatcherType::Audio
+                //         | infer::MatcherType::Image
+                //         | infer::MatcherType::Video
+                // ) {
+                //     error!("Unsupported media type {matcher_type:?}");
+                //     continue;
+                // }
+                let content_type = media_type.mime_type().to_string();
+                match self.active_device.as_ref() {
+                    Some(active_device) => {
+                        let address = local_ip_address::local_ip().unwrap();
+                        active_device
+                            .load(LoadRequest::Url {
+                                content_type,
+                                url: format!(
+                                    "http://{}:{}/media/{}",
+                                    address.to_string(),
+                                    self.web_config.port,
+                                    handle.to_str().unwrap().replace("\\", "<<")
+                                ),
+                                resume_position: None,
+                                speed: None,
+                                volume: None,
+                                metadata: None,
+                                request_headers: None,
+                            })
+                            .unwrap();
+                    }
+                    None => println!("Not connected"),
+                };
+            }
+            UserEvent::ChangeVolume(new_volume) => {
+                if let Some(active_device) = self.active_device.as_ref() {
+                    active_device.change_volume(new_volume).unwrap();
+                }
+            }
+            UserEvent::Seek(new_position) => {
+                if let Some(active_device) = self.active_device.as_ref() {
+                    active_device.seek(new_position).unwrap();
+                }
+            }
             _ => (),
         }
     }
