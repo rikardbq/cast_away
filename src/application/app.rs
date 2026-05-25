@@ -1,6 +1,13 @@
 use std::sync::Arc;
 
-use fcast_sender_sdk::{DeviceDiscovererEventHandler, context::CastContext, device::{DeviceConnectionState, DeviceEventHandler, DeviceInfo, KeyEvent, MediaEvent, PlaybackState, Source}};
+use fcast_sender_sdk::{
+    DeviceDiscovererEventHandler,
+    context::CastContext,
+    device::{
+        DeviceConnectionState, DeviceEventHandler, DeviceInfo, KeyEvent, MediaEvent, PlaybackState,
+        Source,
+    },
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use winit::{
@@ -47,15 +54,9 @@ pub enum UserEvent {
     DeviceChanged(DeviceInfo),
     Connect(String),
     Disconnect,
-    FromDevice {
-        id: usize,
-        event: DeviceEvent,
-    },
+    FromDevice { id: usize, event: DeviceEvent },
     CastLocalRequested,
-    CastLocal {
-        media_type: String,
-        handle: String,
-    },
+    CastLocal { media_type: String, handle: String },
     ChangeVolume(f64),
     Seek(f64),
 }
@@ -203,6 +204,9 @@ impl App {
     pub fn set_initialization_script(&mut self, script: &'static str) {
         self.initialization_script = Some(script);
     }
+    pub fn eval_script(&mut self, script: &str) -> Result<(), wry::Error> {
+        self.webview.as_ref().unwrap().evaluate_script(script)
+    }
 }
 
 impl ApplicationHandler<UserEvent> for App {
@@ -253,8 +257,10 @@ impl ApplicationHandler<UserEvent> for App {
                         Some(serde_json::to_value(files).unwrap())
                     }
                     "discover_devices" => {
-                        let discovery_event_handler = DiscoveryEventHandler::new(self.event_proxy.clone());
-                        self.cast_context.start_discovery(Arc::new(discovery_event_handler));
+                        let discovery_event_handler =
+                            DiscoveryEventHandler::new(self.event_proxy.clone());
+                        self.cast_context
+                            .start_discovery(Arc::new(discovery_event_handler));
 
                         None
                     }
@@ -262,19 +268,13 @@ impl ApplicationHandler<UserEvent> for App {
                 };
                 let response = IpcResponse { id: req.id, result };
                 let json = serde_json::to_string(&response).unwrap();
-                self.webview
-                    .as_ref()
-                    .unwrap()
-                    .evaluate_script(&format!("window.ipc_handler.responseHandler({});", json))
-                    .unwrap();
+                self.eval_script(&format!("window.ipc_handler.responseHandler({});", json))
+                    .expect("Failed to evaluate script");
             }
             UserEvent::DeviceAvailable(device_info) => {
                 println!("{}", device_info.name);
-                self.webview
-                    .as_ref()
-                    .unwrap()
-                    .evaluate_script(&format!("window.postMessage('{}');", device_info.name))
-                    .unwrap();
+                self.eval_script(&format!("window.postMessage('{}');", device_info.name))
+                    .expect("Failed to evaluate script");
             }
             // UserEvent::Connect(device_name) => {
             //     if let Some(device_info) = devices
