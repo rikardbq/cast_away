@@ -4,15 +4,35 @@ import reactLogo from "../assets/react.svg";
 import viteLogo from "/vite.svg";
 import "../app.css";
 import type { GamepadUtils } from "../hooks/useGamepad";
-import { ipc } from "../util/IPC";
+import { ipc } from "../util/ipc";
+import { useEffect, useState } from "react";
 
 type HomeProps = {
     gamepadUtils: GamepadUtils;
 };
 
 export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
+    const [deviceNames, setDeviceNames] = useState<string[]>([]);
+
+    useEffect(() => {
+        window.addEventListener("message", (event) => {
+            console.log("message from rust: ", event);
+            if (event.data) {
+                setDeviceNames((devices) => {
+                    const device = event.data as string;
+                    return devices.includes(device)
+                        ? devices
+                        : [...devices, device];
+                });
+            }
+        });
+    }, []);
+
     return (
         <div>
+            {deviceNames.map((d) => (
+                <p key={d}>{d}</p>
+            ))}
             <p>{`pressed : ${gamepads[0]?.buttons[0].pressed}`}</p>
             <div>
                 <a href="https://vite.dev" target="_blank">
@@ -35,11 +55,18 @@ export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
             <button className="theme-controller btn btn-secondary" value="mys">
                 Two
             </button>
-            <button className="btn btn-error" onClick={async () => {
-                const list = await ipc.call("list_files");
-                console.log(list);
-                
-            }}>TESTING THIS IPC</button>
+            <button
+                className="btn btn-error"
+                onClick={async () => {
+                    const list = await ipc.call("list_files");
+                    console.log(list);
+                    const aa = await ipc.call("discover_devices");
+                    console.log(aa);
+                    
+                }}
+            >
+                TESTING THIS IPC
+            </button>
             <h1>TTTTTTTTTT</h1>
             <Link to="/about">About</Link>
             <Link to="/testing_home">testing home</Link>
