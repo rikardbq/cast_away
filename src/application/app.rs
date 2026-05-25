@@ -186,8 +186,6 @@ impl App {
     pub fn new(host: String, port: String, event_loop: &EventLoop<UserEvent>) -> Self {
         let cast_context = CastContext::new().unwrap();
         let event_proxy = event_loop.create_proxy();
-        let discovery_event_handler = DiscoveryEventHandler::new(event_proxy.clone());
-        cast_context.start_discovery(Arc::new(discovery_event_handler));
 
         Self {
             event_proxy: event_proxy,
