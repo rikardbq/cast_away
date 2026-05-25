@@ -1,35 +1,40 @@
 use cast_away::{
     HOST, KIOSK_SCRIPT, PORT, ROOT_DIR,
-    application::app::{App, UserEvent, WebConfig}, get_or_default_env,
+    application::app::{App, UserEvent, WebConfig},
+    get_or_default_env,
 };
 use std::env;
 use std::path::PathBuf;
 
 use actix_files::{Files, NamedFile};
-use actix_web::{HttpRequest, HttpServer, web};
+use actix_web::{HttpRequest, HttpServer, Responder, web};
 use winit::{
     event_loop::EventLoop,
     window::{Fullscreen, Window},
 };
 // FCAST STUFF
 use fcast_sender_sdk::{
+    DeviceDiscovererEventHandler, IpAddr,
     context::CastContext,
     device::{
         CastingDevice, DeviceConnectionState, DeviceEventHandler, DeviceFeature, DeviceInfo,
         EventSubscription, KeyEvent, LoadRequest, MediaEvent, PlaybackState, ProtocolType, Source,
     },
-    DeviceDiscovererEventHandler, IpAddr,
 };
 
 use tokio::{
     runtime::Runtime,
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::mpsc::{Receiver, Sender, channel},
 };
 // FCAST STUFF END
 
-async fn index(_req: HttpRequest) -> actix_web::Result<NamedFile> {
+async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
     let path: PathBuf = format!("./{ROOT_DIR}/index.html").parse().unwrap();
-    Ok(NamedFile::open(path)?)
+    Ok(NamedFile::open(path)?
+        .use_etag(false)
+        .use_last_modified(false)
+        .customize()
+        .insert_header(("Cache-Control", "no-store")))
 }
 
 // FCAST STUFF
@@ -212,5 +217,4 @@ async fn main() {
     // let discovery_event_handler = DiscoveryEventHandler::new(event_tx.clone());
     // cast_context.start_discovery(Arc::new(discovery_event_handler));
     // FCAST STUFF END
-
 }

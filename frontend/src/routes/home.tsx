@@ -36,7 +36,7 @@ export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
                 Two
             </button>
             <button className="btn btn-error" onClick={async () => {
-                const list = await ipc.call("get_windows");
+                const list = await ipc.call("list_files");
                 console.log(list);
                 
             }}>TESTING THIS IPC</button>
