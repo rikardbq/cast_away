@@ -1,4 +1,6 @@
-use fcast_sender_sdk::device::DeviceInfo;
+use std::sync::Arc;
+
+use fcast_sender_sdk::{DeviceDiscovererEventHandler, context::CastContext, device::{DeviceConnectionState, DeviceEventHandler, DeviceInfo, KeyEvent, MediaEvent, PlaybackState, Source}};
 use serde::{Deserialize, Serialize};
 use winit::{
     application::ApplicationHandler,
@@ -8,15 +10,14 @@ use winit::{
     window::{Icon, Window, WindowAttributes, WindowId},
 };
 use wry::{WebView, WebViewBuilder};
-// use x_win::get_open_windows;
 
-use crate::{HOST, IPC_HANDLER_INIT_SCRIPT, PORT, ROOT_DIR, get_or_default_env};
+use crate::{IPC_HANDLER_INIT_SCRIPT, ROOT_DIR};
 
 #[derive(Deserialize)]
 struct IpcRequest {
     id: u64,
     method: String,
-    params: serde_json::Value,
+    params: serde_json::Value, // remember to check later...
 }
 
 #[derive(Serialize)]
@@ -26,9 +27,128 @@ struct IpcResponse {
 }
 
 #[derive(Debug)]
-pub enum UserEvents {
+pub enum DeviceEvent {
+    ConnectionStateChanged(DeviceConnectionState),
+    VolumeChanged(f64),
+    TimeChanged(f64),
+    PlaybackStateChanged(PlaybackState),
+    DurationChanged(f64),
+    SpeedChanged(f64),
+    SourceChanged(Source),
+}
+
+#[derive(Debug)]
+pub enum UserEvent {
     ExecEval(String),
+    Quit,
     DeviceAvailable(DeviceInfo),
+    DeviceRemoved(String),
+    DeviceChanged(DeviceInfo),
+    Connect(String),
+    Disconnect,
+    FromDevice {
+        id: usize,
+        event: DeviceEvent,
+    },
+    CastLocalRequested,
+    CastLocal {
+        media_type: String,
+        handle: String,
+    },
+    ChangeVolume(f64),
+    Seek(f64),
+}
+
+struct DiscoveryEventHandler {
+    event_loop_proxy: EventLoopProxy<UserEvent>,
+}
+
+impl DiscoveryEventHandler {
+    pub fn new(event_loop_proxy: EventLoopProxy<UserEvent>) -> Self {
+        Self { event_loop_proxy }
+    }
+}
+
+impl DeviceDiscovererEventHandler for DiscoveryEventHandler {
+    fn device_available(&self, device_info: DeviceInfo) {
+        let event_loop_proxy = self.event_loop_proxy.clone();
+        event_loop_proxy
+            .send_event(UserEvent::DeviceAvailable(device_info))
+            .expect("Failed to send event");
+    }
+
+    fn device_removed(&self, device_name: String) {
+        let event_loop_proxy = self.event_loop_proxy.clone();
+        event_loop_proxy
+            .send_event(UserEvent::DeviceRemoved(device_name))
+            .expect("Failed to send event");
+    }
+
+    fn device_changed(&self, device_info: DeviceInfo) {
+        let event_loop_proxy = self.event_loop_proxy.clone();
+        event_loop_proxy
+            .send_event(UserEvent::DeviceChanged(device_info))
+            .expect("Failed to send event");
+    }
+}
+
+struct DevEventHandler {
+    event_loop_proxy: EventLoopProxy<UserEvent>,
+    id: usize,
+}
+
+impl DevEventHandler {
+    pub fn new(event_loop_proxy: EventLoopProxy<UserEvent>, id: usize) -> Self {
+        Self { event_loop_proxy, id }
+    }
+
+    fn send_event(&self, event: DeviceEvent) {
+        let id = self.id;
+        let event_loop_proxy = self.event_loop_proxy.clone();
+        if let Err(err) = event_loop_proxy.send_event(UserEvent::FromDevice { id, event }) {
+            println!("Failed to send event: {err}");
+        }
+    }
+}
+
+impl DeviceEventHandler for DevEventHandler {
+    fn connection_state_changed(&self, state: DeviceConnectionState) {
+        self.send_event(DeviceEvent::ConnectionStateChanged(state));
+    }
+
+    fn volume_changed(&self, volume: f64) {
+        self.send_event(DeviceEvent::VolumeChanged(volume));
+    }
+
+    fn time_changed(&self, time: f64) {
+        self.send_event(DeviceEvent::TimeChanged(time));
+    }
+
+    fn playback_state_changed(&self, state: PlaybackState) {
+        self.send_event(DeviceEvent::PlaybackStateChanged(state));
+    }
+
+    fn duration_changed(&self, duration: f64) {
+        self.send_event(DeviceEvent::DurationChanged(duration));
+    }
+
+    fn speed_changed(&self, speed: f64) {
+        self.send_event(DeviceEvent::SpeedChanged(speed));
+    }
+
+    fn source_changed(&self, source: Source) {
+        self.send_event(DeviceEvent::SourceChanged(source));
+    }
+
+    fn key_event(&self, _event: KeyEvent) {}
+
+    fn media_event(&self, event: MediaEvent) {
+        println!("Media event: {event:?}");
+    }
+
+    fn playback_error(&self, message: String) {
+        println!("Playback error: {message}");
+    }
 }
 
 pub struct WebConfig {
@@ -52,8 +172,9 @@ impl WebConfig {
 }
 
 pub struct App {
-    event_loop_proxy: EventLoopProxy<UserEvents>,
+    event_loop_proxy: EventLoopProxy<UserEvent>,
     web_config: WebConfig,
+    cast_context: CastContext,
     window: Option<Window>,
     webview: Option<WebView>,
     window_attributes: Option<WindowAttributes>,
@@ -61,21 +182,21 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(host: String, port: String, event_loop: &EventLoop<UserEvents>) -> Self {
+    pub fn new(host: String, port: String, event_loop: &EventLoop<UserEvent>) -> Self {
+        let cast_context = CastContext::new().unwrap();
+        let event_loop_proxy = event_loop.create_proxy();
+        let discovery_event_handler = DiscoveryEventHandler::new(event_loop_proxy.clone());
+        cast_context.start_discovery(Arc::new(discovery_event_handler));
+
         Self {
-            event_loop_proxy: event_loop.create_proxy(),
+            event_loop_proxy: event_loop_proxy,
             web_config: WebConfig::new(host, port),
+            cast_context,
             window: None,
             webview: None,
             window_attributes: None,
             initialization_script: None,
         }
-    }
-    pub fn set_event_loop_proxy(&mut self, proxy: EventLoopProxy<UserEvents>) {
-        self.event_loop_proxy = proxy;
-    }
-    pub fn set_web_config(&mut self, web_config: WebConfig) {
-        self.web_config = web_config;
     }
     pub fn set_window_attributes(&mut self, attributes: WindowAttributes) {
         self.window_attributes = Some(attributes);
@@ -85,7 +206,7 @@ impl App {
     }
 }
 
-impl ApplicationHandler<UserEvents> for App {
+impl ApplicationHandler<UserEvent> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let win_attr = self
             .window_attributes
@@ -107,7 +228,7 @@ impl ApplicationHandler<UserEvents> for App {
         webview_builder = webview_builder.with_ipc_handler(move |req| {
             let msg = req.body().to_string();
             proxy_clone
-                .send_event(UserEvents::ExecEval(msg))
+                .send_event(UserEvent::ExecEval(msg))
                 .expect("Failed to send event");
         });
         if let Some(script) = self.initialization_script {
@@ -118,9 +239,9 @@ impl ApplicationHandler<UserEvents> for App {
         self.webview = Some(webview);
     }
 
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: UserEvents) {
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: UserEvent) {
         match event {
-            UserEvents::ExecEval(msg) => {
+            UserEvent::ExecEval(msg) => {
                 let req: IpcRequest = serde_json::from_str(&msg).unwrap();
                 let result = match req.method.as_str() {
                     "list_files" => {
@@ -132,12 +253,6 @@ impl ApplicationHandler<UserEvents> for App {
 
                         serde_json::to_value(files).unwrap()
                     }
-                    // "get_windows" => {
-                    //     let open_windows = get_open_windows().expect("Error showing windows");
-                    //     let titles: Vec<String> = open_windows.iter().map(|x| x.title.clone()).collect();
-                    //     serde_json::to_value(titles).unwrap()
-                    
-                    // }
                     _ => serde_json::json!({"error": "unknown method"}),
                 };
 
@@ -150,7 +265,10 @@ impl ApplicationHandler<UserEvents> for App {
                     .evaluate_script(&format!("window.ipc_handler.responseHandler({});", json))
                     .unwrap();
             }
-            _ => ()
+            UserEvent::DeviceAvailable(device_info) => {
+                println!("NAME: {}\nPORT: {}", device_info.name, device_info.port)
+            }
+            _ => (),
         }
     }
 

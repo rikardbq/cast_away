@@ -1,6 +1,6 @@
 use cast_away::{
     HOST, KIOSK_SCRIPT, PORT, ROOT_DIR,
-    application::app::{App, UserEvents, WebConfig}, get_or_default_env,
+    application::app::{App, UserEvent, WebConfig}, get_or_default_env,
 };
 use std::env;
 use std::path::PathBuf;
@@ -191,7 +191,7 @@ async fn main() {
         .run()
     });
 
-    let event_loop: EventLoop<UserEvents> = EventLoop::with_user_event().build().unwrap();
+    let event_loop: EventLoop<UserEvent> = EventLoop::with_user_event().build().unwrap();
     let mut app = App::new(srv_host, srv_port, &event_loop);
     let cli_args: Vec<String> = env::args().collect();
     cli_args.iter().for_each(|x| match x.as_str() {
