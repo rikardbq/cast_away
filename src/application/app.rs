@@ -1,4 +1,7 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{MAIN_SEPARATOR_STR, PathBuf},
+    sync::Arc,
+};
 
 use fcast_sender_sdk::{
     DeviceDiscovererEventHandler, IpAddr,
@@ -322,7 +325,6 @@ impl ApplicationHandler<UserEvent> for App {
                             match infer::get_from_path(handle.clone()) {
                                 Ok(res) => match res {
                                     Some(type_) => {
-                                        println!("{type_}");
                                         event_proxy
                                             .send_event(UserEvent::CastLocal {
                                                 media_type: type_,
@@ -449,15 +451,14 @@ impl ApplicationHandler<UserEvent> for App {
                 let content_type = media_type.mime_type().to_string();
                 match self.active_device.as_ref() {
                     Some(active_device) => {
-                        let address = local_ip_address::local_ip().unwrap();
                         active_device
                             .load(LoadRequest::Url {
                                 content_type,
                                 url: format!(
                                     "http://{}:{}/media/{}",
-                                    address.to_string(),
+                                    local_ip_address::local_ip().unwrap().to_string(),
                                     self.web_config.port,
-                                    handle.to_str().unwrap().replace("\\", "<<")
+                                    handle.to_str().unwrap().replace(MAIN_SEPARATOR_STR, "<<")
                                 ),
                                 resume_position: None,
                                 speed: None,

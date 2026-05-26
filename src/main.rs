@@ -4,7 +4,7 @@ use cast_away::{
     get_or_default_env,
 };
 use std::env;
-use std::path::PathBuf;
+use std::path::{MAIN_SEPARATOR_STR, PathBuf};
 
 use actix_files::{Files, NamedFile};
 use actix_web::{HttpRequest, HttpServer, Responder, web};
@@ -14,7 +14,7 @@ use winit::{
 };
 
 async fn media_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
-    let file = path.into_inner().replace("<<", "/");
+    let file = path.into_inner().replace("<<", MAIN_SEPARATOR_STR);
     Ok(NamedFile::open(file)?
         .use_etag(false)
         .use_last_modified(false)
