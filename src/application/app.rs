@@ -1,6 +1,12 @@
 use std::{
-    path::{MAIN_SEPARATOR_STR, PathBuf},
-    sync::Arc,
+    ffi::OsStr,
+    fs,
+    path::{MAIN_SEPARATOR_STR, Path, PathBuf},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
 };
 
 use fcast_sender_sdk::{
@@ -11,6 +17,7 @@ use fcast_sender_sdk::{
         EventSubscription, KeyEvent, LoadRequest, MediaEvent, PlaybackState, Source,
     },
 };
+use ffmpeg_sidecar::{child::FfmpegChild, command::FfmpegCommand};
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use winit::{
@@ -22,7 +29,7 @@ use winit::{
 };
 use wry::{WebView, WebViewBuilder};
 
-use crate::{IPC_HANDLER_INIT_SCRIPT, ROOT_DIR};
+use crate::{ASSETS_ROOT_DIR, IPC_HANDLER_INIT_SCRIPT, get_application_root_dir};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -206,6 +213,9 @@ pub struct App {
     active_device: Option<Arc<dyn CastingDevice>>,
     current_device_id: usize,
     local_adddress: IpAddr,
+    // streamable_gen_t: Arc<AtomicBool>,
+    // old_handle_f: Option<PathBuf>,
+    subshell: Arc<Mutex<Option<FfmpegChild>>>,
 }
 
 impl App {
@@ -231,6 +241,9 @@ impl App {
             active_device,
             current_device_id,
             local_adddress,
+            // streamable_gen_t: Arc::new(AtomicBool::new(true)),
+            // old_handle_f: None,
+            subshell: Arc::new(Mutex::<Option<FfmpegChild>>::new(None)),
         }
     }
     pub fn set_window_attributes(&mut self, attributes: WindowAttributes) {
@@ -252,7 +265,15 @@ impl ApplicationHandler<UserEvent> for App {
             .or(Some(Window::default_attributes()))
             .unwrap()
             .with_window_icon(Some(
-                Icon::from_path(&format!("{ROOT_DIR}/testicon.ico"), None).unwrap(),
+                Icon::from_path(
+                    &format!(
+                        "{}/{}/testicon.ico",
+                        get_application_root_dir().to_string_lossy(),
+                        ASSETS_ROOT_DIR
+                    ),
+                    None,
+                )
+                .unwrap(),
             ));
         let window = event_loop.create_window(win_attr).unwrap();
         let mut webview_builder = WebViewBuilder::new()
@@ -321,7 +342,61 @@ impl ApplicationHandler<UserEvent> for App {
                             .add_filter("All", &["*"])
                             .pick_file();
                         if let Some(handle) = file_path {
+                            let subshell = Arc::clone(&self.subshell);
+                            {
+                                if let Some(mut shell) = subshell.lock().unwrap().take() {
+                                    if let Err(_) = shell.quit() {
+                                        let _ = shell.kill();
+                                    }
+                                }
+                            }
                             let event_proxy = self.event_proxy.clone();
+                            let handle_clone = handle.clone();
+                            // let streamable_gen_t_clone = Arc::clone(&self.streamable_gen_t);
+                            // let subshell = Arc::clone(&self.subshell);
+                            thread::spawn(move || {
+                                let cache_dir = get_application_root_dir().join(Path::new("cache"));
+                                if !Path::is_dir(&cache_dir.as_path()) {
+                                    fs::create_dir_all(&cache_dir).unwrap();
+                                }
+                                let ext = handle_clone.extension().unwrap_or(&OsStr::new("mp4"));
+                                let expected_out = &format!(
+                                    "{}{}streamable.{}",
+                                    cache_dir.to_string_lossy(),
+                                    MAIN_SEPARATOR_STR,
+                                    ext.to_string_lossy()
+                                );
+                                let subs = handle_clone
+                                    .to_string_lossy()
+                                    .replace("C:", "")
+                                    .replace("\\", "/");
+                                let mut subshell_guard = subshell.lock().unwrap();
+                                *subshell_guard = Some(
+                                    FfmpegCommand::new()
+                                        .args([
+                                            "-i",
+                                            handle_clone.to_str().unwrap(),
+                                            // "-vf",
+                                            // &format!(
+                                            //     "\"subtitles={}:si=30\"",
+                                            //     subs
+                                            // ),
+                                            "-movflags",
+                                            "frag_keyframe+empty_moov+faststart",
+                                            "-y",
+                                        ])
+                                        .arg(expected_out)
+                                        .spawn()
+                                        .unwrap(),
+                                );
+                                // subshell_guard.take().unwrap().wait().unwrap();
+                                // let mut started = false;
+                                // while streamable_gen_t_clone.load(Ordering::SeqCst) {
+                                //     if !started {
+                                //         started = true;
+                                //     }
+                                // }
+                            });
                             match infer::get_from_path(handle.clone()) {
                                 Ok(res) => match res {
                                     Some(type_) => {
@@ -338,6 +413,7 @@ impl ApplicationHandler<UserEvent> for App {
                                     println!("Failed to infer type of file: {err}");
                                 }
                             };
+                            // self.streamable_gen_t.store(true, Ordering::SeqCst);
                         }
 
                         None
@@ -382,19 +458,19 @@ impl ApplicationHandler<UserEvent> for App {
                             DeviceConnectionState::Disconnected => (),
                             DeviceConnectionState::Connecting => (),
                             DeviceConnectionState::Reconnecting => {
-                                self.eval_script(&format!(
-                                    "window.postMessage('{}');",
-                                    "connecting"
-                                ))
-                                .expect("Failed to evaluate script");
+                                // self.eval_script(&format!(
+                                //     "window.postMessage('{}');",
+                                //     "connecting"
+                                // ))
+                                // .expect("Failed to evaluate script");
                             }
                             DeviceConnectionState::Connected { local_addr, .. } => {
                                 self.local_adddress = local_addr;
-                                self.eval_script(&format!(
-                                    "window.postMessage('{}');",
-                                    "connected"
-                                ))
-                                .expect("Failed to evaluate script");
+                                // self.eval_script(&format!(
+                                //     "window.postMessage('{}');",
+                                //     "connected"
+                                // ))
+                                // .expect("Failed to evaluate script");
                                 if let Some(active_device) = &self.active_device {
                                     if active_device
                                         .supports_feature(DeviceFeature::MediaEventSubscription)
@@ -406,18 +482,18 @@ impl ApplicationHandler<UserEvent> for App {
                             }
                         },
                         DeviceEvent::VolumeChanged(volume) => {
-                            self.eval_script(&format!(
-                                "window.postMessage('{}');",
-                                format!("volume_changed:{}", volume)
-                            ))
-                            .expect("Failed to evaluate script");
+                            // self.eval_script(&format!(
+                            //     "window.postMessage('{}');",
+                            //     format!("volume_changed:{}", volume)
+                            // ))
+                            // .expect("Failed to evaluate script");
                         }
                         DeviceEvent::TimeChanged(time) => {
-                            self.eval_script(&format!(
-                                "window.postMessage('{}');",
-                                format!("time_changed:{}", time)
-                            ))
-                            .expect("Failed to evaluate script");
+                            // self.eval_script(&format!(
+                            //     "window.postMessage('{}');",
+                            //     format!("time_changed:{}", time)
+                            // ))
+                            // .expect("Failed to evaluate script");
                         }
                         DeviceEvent::PlaybackStateChanged(state) => match state {
                             PlaybackState::Idle => (),
@@ -426,14 +502,14 @@ impl ApplicationHandler<UserEvent> for App {
                             PlaybackState::Paused => (),
                         },
                         DeviceEvent::DurationChanged(duration) => {
-                            self.eval_script(&format!(
-                                "window.postMessage('{}');",
-                                format!("duration_changed:{}", duration)
-                            ))
-                            .expect("Failed to evaluate script");
+                            // self.eval_script(&format!(
+                            //     "window.postMessage('{}');",
+                            //     format!("duration_changed:{}", duration)
+                            // ))
+                            // .expect("Failed to evaluate script");
                         }
                         DeviceEvent::SpeedChanged(_) => (),
-                        DeviceEvent::SourceChanged(source) => (),
+                        DeviceEvent::SourceChanged(_source) => (),
                     }
                 }
             }
@@ -449,24 +525,25 @@ impl ApplicationHandler<UserEvent> for App {
                 //     continue;
                 // }
                 let content_type = media_type.mime_type().to_string();
+                println!("HELLO IM TRYING TO CAST A LOCAL FILE");
                 match self.active_device.as_ref() {
                     Some(active_device) => {
-                        active_device
-                            .load(LoadRequest::Url {
-                                content_type,
-                                url: format!(
-                                    "http://{}:{}/media/{}",
-                                    local_ip_address::local_ip().unwrap().to_string(),
-                                    self.web_config.port,
-                                    handle.to_str().unwrap().replace(MAIN_SEPARATOR_STR, "<<")
-                                ),
-                                resume_position: None,
-                                speed: None,
-                                volume: None,
-                                metadata: None,
-                                request_headers: None,
-                            })
-                            .unwrap();
+                        if let Err(dev_err) = active_device.load(LoadRequest::Url {
+                            content_type,
+                            url: format!(
+                                "http://{}:{}/stream/{}",
+                                local_ip_address::local_ip().unwrap().to_string(),
+                                self.web_config.port,
+                                handle.to_str().unwrap().replace(MAIN_SEPARATOR_STR, "<<")
+                            ),
+                            resume_position: None,
+                            speed: None,
+                            volume: None,
+                            metadata: None,
+                            request_headers: None,
+                        }) {
+                            println!("{:?}", dev_err);
+                        }
                     }
                     None => println!("Not connected"),
                 };
@@ -494,6 +571,12 @@ impl ApplicationHandler<UserEvent> for App {
         match event {
             WindowEvent::CloseRequested => {
                 println!("The close button was pressed; stopping");
+                let subshell = Arc::clone(&self.subshell);
+                if let Some(mut shell) = subshell.lock().unwrap().take() {
+                    if let Err(_) = shell.quit() {
+                        let _ = shell.kill();
+                    }
+                }
                 event_loop.exit();
             }
             _ => (),

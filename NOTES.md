@@ -1,5 +1,13 @@
 ### Notes to self (RUST)
 
+- FFMPEG
+    - mp4:
+        - `ffmpeg -i .\Arcane.S02E01.Heavy.Is.the.Crown.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv -vf "subtitles=Arcane.S02E01.Heavy.Is.the.Crown.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv:si=30" -movflags frag_keyframe+empty_moov+faststart test.mkv`
+    - hls:
+        - `ffmpeg -i 5621903-hd_1920_1080_25fps.mp4 -vf subtitles=subs.srt -c:v h264 -c:a aac -hls_base_url /hls/ -f hls index.m3u8`
+    - dash:
+        - `ffmpeg -i .\5621903-hd_1920_1080_25fps.mp4 -c:v libx264 -c:a aac -vf subtitles=subs.srt -use_template 1 -use_timeline 1 -seg_duration 6 -base-url "/dash/" -f dash manifest.mpd`
+
 - https://github.com/futo-org/fcast/blob/master/sdk/sender/examples/desktop/src/main.rs
 - This will need to be implemented with "event_loop_proxy", will work in much the same way but will be handled inside of "src/application/app.rs"
 - The code from fcast-sender-sdk works with a ui event loop, this will do the same by event struct here is called UserEvents

@@ -1,13 +1,18 @@
+// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use cast_away::{
-    HOST, KIOSK_SCRIPT, PORT, ROOT_DIR,
+    ASSETS_ROOT_DIR, HOST, KIOSK_SCRIPT, PORT,
     application::app::{App, UserEvent},
     get_or_default_env,
 };
+use ffmpeg_sidecar::paths::{ffmpeg_path, sidecar_path};
 use std::env;
 use std::path::{MAIN_SEPARATOR_STR, PathBuf};
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 use actix_files::{Files, NamedFile};
-use actix_web::{HttpRequest, HttpServer, Responder, web};
+use actix_web::{HttpRequest, HttpResponse, HttpServer, Responder, web};
+use futures::StreamExt;
 use winit::{
     event_loop::EventLoop,
     window::{Fullscreen, Window},
@@ -19,11 +24,61 @@ async fn media_handler(path: web::Path<String>) -> actix_web::Result<impl Respon
         .use_etag(false)
         .use_last_modified(false)
         .customize()
+        // .insert_header(("Content-Type", "video/mp4"))
         .insert_header(("Cache-Control", "no-store")))
 }
 
+async fn hls_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
+    let file = path.into_inner();
+
+    if file.ends_with(".m3u8") {
+        Ok(NamedFile::open(format!("./hls/{}", file))?
+            .use_etag(false)
+            .use_last_modified(false)
+            .customize()
+            .insert_header(("Content-Type", "application/vnd.apple.mpegurl"))
+            // .insert_header(("Content-Type", "application/x-mpegURL"))
+            .insert_header(("Cache-Control", "no-cache")))
+    } else {
+        Ok(NamedFile::open(format!("./hls/{}", file))?
+            .use_etag(false)
+            .use_last_modified(false)
+            .customize()
+            .insert_header(("Content-Type", "video/mp2t")))
+        // .insert_header(("Cache-Control", "no-cache")))
+    }
+}
+
+async fn dash_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
+    let file = path.into_inner();
+
+    if file.ends_with(".mpd") {
+        Ok(NamedFile::open(format!("./dash/{}", file))?
+            .use_etag(false)
+            .use_last_modified(false)
+            .customize()
+            .insert_header(("Content-Type", "application/dash+xml"))
+            .insert_header(("Cache-Control", "no-cache")))
+    } else {
+        Ok(NamedFile::open(format!("./dash/{}", file))?
+            .use_etag(false)
+            .use_last_modified(false)
+            .customize()
+            .insert_header(("Content-Type", "video/iso.segment")))
+        // .insert_header(("Content-Type", "video/mp4")))
+        // .insert_header(("Cache-Control", "no-cache")))
+    }
+}
+
+async fn stream_video(path: web::Path<String>) -> impl Responder {
+    let p = path.into_inner().replace("<<", MAIN_SEPARATOR_STR);
+    let file = tokio::fs::File::open(p).await.unwrap();
+    let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+    HttpResponse::Ok().streaming(stream)
+}
+
 async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
-    let path: PathBuf = format!("./{ROOT_DIR}/index.html").parse().unwrap();
+    let path: PathBuf = format!("./{ASSETS_ROOT_DIR}/index.html").parse().unwrap();
     Ok(NamedFile::open(path)?
         .use_etag(false)
         .use_last_modified(false)
@@ -34,15 +89,22 @@ async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
 // #[actix_web::main]
 #[tokio::main]
 async fn main() {
+    println!(
+        "{}",
+        sidecar_path().unwrap().to_string_lossy()
+    );
     let srv_host = get_or_default_env("SRV_HOST", HOST);
     let srv_port = get_or_default_env("SRV_PORT", PORT);
-    let srv_root = get_or_default_env("SRV_ROOT", ROOT_DIR);
+    let srv_root = get_or_default_env("SRV_ROOT", ASSETS_ROOT_DIR);
 
     let web_srv = tokio::spawn({
         HttpServer::new(move || {
             actix_web::App::new()
                 .route("/", web::get().to(index))
                 .route("/media/{file_name}", web::get().to(media_handler))
+                .route("/hls/{file_name}", web::get().to(hls_handler))
+                .route("/dash/{file_name}", web::get().to(dash_handler))
+                .route("/stream/{file_name}", web::get().to(stream_video))
                 .service(Files::new("/", format!("./{srv_root}")))
         })
         .bind(format!("0.0.0.0:{srv_port}"))
