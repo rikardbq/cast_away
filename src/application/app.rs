@@ -1,25 +1,21 @@
 use std::{
-    ffi::OsStr,
     fs,
-    path::{MAIN_SEPARATOR_STR, Path, PathBuf},
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
+    path::{MAIN_SEPARATOR_STR, Path},
+    sync::{Arc, Mutex},
     thread,
+    time::Duration,
 };
 
 use fcast_sender_sdk::{
-    DeviceDiscovererEventHandler, IpAddr,
+    IpAddr,
     context::CastContext,
     device::{
-        CastingDevice, DeviceConnectionState, DeviceEventHandler, DeviceFeature, DeviceInfo,
-        EventSubscription, KeyEvent, LoadRequest, MediaEvent, PlaybackState, Source,
+        CastingDevice, DeviceConnectionState, DeviceFeature, DeviceInfo, EventSubscription,
+        LoadRequest, PlaybackState,
     },
 };
 use ffmpeg_sidecar::{child::FfmpegChild, command::FfmpegCommand};
 use rfd::FileDialog;
-use serde::{Deserialize, Serialize};
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -29,176 +25,14 @@ use winit::{
 };
 use wry::{WebView, WebViewBuilder};
 
-use crate::{ASSETS_ROOT_DIR, IPC_HANDLER_INIT_SCRIPT, get_application_root_dir};
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum IpcMethod {
-    ListFiles,
-    DiscoverDevices,
-    ConnectToDevice,
-    DisconnectFromDevice,
-    RequestCastLocal,
-    #[serde(other)]
-    Unknown,
-}
-
-#[derive(Deserialize)]
-struct IpcRequest {
-    id: u64,
-    method: IpcMethod,
-    params: serde_json::Value,
-}
-
-#[derive(Serialize)]
-struct IpcResponse {
-    id: u64,
-    result: Option<serde_json::Value>,
-}
-
-#[derive(Debug)]
-pub enum DeviceEvent {
-    ConnectionStateChanged(DeviceConnectionState),
-    VolumeChanged(f64),
-    TimeChanged(f64),
-    PlaybackStateChanged(PlaybackState),
-    DurationChanged(f64),
-    SpeedChanged(f64),
-    SourceChanged(Source),
-}
-
-#[derive(Debug)]
-pub enum UserEvent {
-    ExecEval(String),
-    Quit,
-    DeviceAvailable(DeviceInfo),
-    DeviceRemoved(String),
-    DeviceChanged(DeviceInfo),
-    Connect(String),
-    Disconnect,
-    FromDevice {
-        id: usize,
-        event: DeviceEvent,
+use crate::{
+    ASSETS_ROOT_DIR, IPC_HANDLER_INIT_SCRIPT,
+    application::{
+        DevEventHandler, DeviceEvent, DiscoveryEventHandler, IpcMethod, IpcRequest, IpcResponse,
+        UserEvent, WebConfig,
     },
-    CastLocal {
-        media_type: infer::Type,
-        handle: PathBuf,
-    },
-    ChangeVolume(f64),
-    Seek(f64),
-}
-
-struct DiscoveryEventHandler {
-    event_proxy: EventLoopProxy<UserEvent>,
-}
-
-impl DiscoveryEventHandler {
-    pub fn new(event_proxy: EventLoopProxy<UserEvent>) -> Self {
-        Self { event_proxy }
-    }
-}
-
-impl DeviceDiscovererEventHandler for DiscoveryEventHandler {
-    fn device_available(&self, device_info: DeviceInfo) {
-        let event_proxy = self.event_proxy.clone();
-        event_proxy
-            .send_event(UserEvent::DeviceAvailable(device_info))
-            .expect("Failed to send event");
-    }
-
-    fn device_removed(&self, device_name: String) {
-        let event_proxy = self.event_proxy.clone();
-        event_proxy
-            .send_event(UserEvent::DeviceRemoved(device_name))
-            .expect("Failed to send event");
-    }
-
-    fn device_changed(&self, device_info: DeviceInfo) {
-        let event_proxy = self.event_proxy.clone();
-        event_proxy
-            .send_event(UserEvent::DeviceChanged(device_info))
-            .expect("Failed to send event");
-    }
-}
-
-struct DevEventHandler {
-    event_proxy: EventLoopProxy<UserEvent>,
-    id: usize,
-}
-
-impl DevEventHandler {
-    pub fn new(event_proxy: EventLoopProxy<UserEvent>, id: usize) -> Self {
-        Self { event_proxy, id }
-    }
-
-    fn send_event(&self, event: DeviceEvent) {
-        let id = self.id;
-        let event_proxy = self.event_proxy.clone();
-        if let Err(err) = event_proxy.send_event(UserEvent::FromDevice { id, event }) {
-            println!("Failed to send event: {err}");
-        }
-    }
-}
-
-impl DeviceEventHandler for DevEventHandler {
-    fn connection_state_changed(&self, state: DeviceConnectionState) {
-        self.send_event(DeviceEvent::ConnectionStateChanged(state));
-    }
-
-    fn volume_changed(&self, volume: f64) {
-        self.send_event(DeviceEvent::VolumeChanged(volume));
-    }
-
-    fn time_changed(&self, time: f64) {
-        self.send_event(DeviceEvent::TimeChanged(time));
-    }
-
-    fn playback_state_changed(&self, state: PlaybackState) {
-        self.send_event(DeviceEvent::PlaybackStateChanged(state));
-    }
-
-    fn duration_changed(&self, duration: f64) {
-        self.send_event(DeviceEvent::DurationChanged(duration));
-    }
-
-    fn speed_changed(&self, speed: f64) {
-        self.send_event(DeviceEvent::SpeedChanged(speed));
-    }
-
-    fn source_changed(&self, source: Source) {
-        self.send_event(DeviceEvent::SourceChanged(source));
-    }
-
-    fn key_event(&self, _event: KeyEvent) {}
-
-    fn media_event(&self, event: MediaEvent) {
-        println!("Media event: {event:?}");
-    }
-
-    fn playback_error(&self, message: String) {
-        println!("Playback error: {message}");
-    }
-}
-
-pub struct WebConfig {
-    hostname: String,
-    port: usize,
-}
-
-impl WebConfig {
-    pub fn new(hostname: String, port: String) -> Self {
-        Self {
-            hostname,
-            port: port.parse::<usize>().unwrap(),
-        }
-    }
-    pub fn set_hostname(&mut self, hostname: String) {
-        self.hostname = hostname;
-    }
-    pub fn set_port(&mut self, port: usize) {
-        self.port = port;
-    }
-}
+    get_application_root_dir,
+};
 
 pub struct App {
     event_proxy: EventLoopProxy<UserEvent>,
@@ -359,12 +193,14 @@ impl ApplicationHandler<UserEvent> for App {
                                 if !Path::is_dir(&cache_dir.as_path()) {
                                     fs::create_dir_all(&cache_dir).unwrap();
                                 }
-                                let ext = handle_clone.extension().unwrap_or(&OsStr::new("mp4"));
                                 let expected_out = &format!(
-                                    "{}{}streamable.{}",
+                                    "{}{}manifest.mpd",
                                     cache_dir.to_string_lossy(),
                                     MAIN_SEPARATOR_STR,
-                                    ext.to_string_lossy()
+                                    // handle_clone
+                                    //     .extension()
+                                    //     .unwrap_or(&OsStr::new("mp4"))
+                                    //     .to_string_lossy()
                                 );
                                 let subs = handle_clone
                                     .to_string_lossy()
@@ -376,19 +212,51 @@ impl ApplicationHandler<UserEvent> for App {
                                         .args([
                                             "-i",
                                             handle_clone.to_str().unwrap(),
-                                            // "-vf",
-                                            // &format!(
-                                            //     "\"subtitles={}:si=30\"",
-                                            //     subs
-                                            // ),
-                                            "-movflags",
-                                            "frag_keyframe+empty_moov+faststart",
+                                            "-vf",
+                                            &format!("subtitles={}:si=30", subs),
+                                            // "-movflags",
+                                            // "frag_keyframe+empty_moov+faststart",
+                                            // DASH
+                                            "-use_template",
+                                            "1",
+                                            "-use_timeline",
+                                            "1",
+                                            "-seg_duration",
+                                            "6",
+                                            "-f",
+                                            "dash",
+                                            // DASH END
+                                            // HLS
+                                            // "-f",
+                                            // "hls",
+                                            // "-hls_base_url",
+                                            // "/hls/",
+                                            // HLS END
                                             "-y",
                                         ])
                                         .arg(expected_out)
                                         .spawn()
                                         .unwrap(),
                                 );
+                                while !Path::is_file(Path::new(expected_out)) {
+                                    std::thread::sleep(Duration::from_secs(1));
+                                }
+                                match infer::get_from_path(handle.clone()) {
+                                    Ok(res) => match res {
+                                        Some(type_) => {
+                                            event_proxy
+                                                .send_event(UserEvent::CastLocal {
+                                                    media_type: type_,
+                                                    handle,
+                                                })
+                                                .unwrap();
+                                        }
+                                        None => println!("Unable to get file type"),
+                                    },
+                                    Err(err) => {
+                                        println!("Failed to infer type of file: {err}");
+                                    }
+                                };
                                 // subshell_guard.take().unwrap().wait().unwrap();
                                 // let mut started = false;
                                 // while streamable_gen_t_clone.load(Ordering::SeqCst) {
@@ -397,22 +265,22 @@ impl ApplicationHandler<UserEvent> for App {
                                 //     }
                                 // }
                             });
-                            match infer::get_from_path(handle.clone()) {
-                                Ok(res) => match res {
-                                    Some(type_) => {
-                                        event_proxy
-                                            .send_event(UserEvent::CastLocal {
-                                                media_type: type_,
-                                                handle,
-                                            })
-                                            .unwrap();
-                                    }
-                                    None => println!("Unable to get file type"),
-                                },
-                                Err(err) => {
-                                    println!("Failed to infer type of file: {err}");
-                                }
-                            };
+                            // match infer::get_from_path(handle.clone()) {
+                            //     Ok(res) => match res {
+                            //         Some(type_) => {
+                            //             event_proxy
+                            //                 .send_event(UserEvent::CastLocal {
+                            //                     media_type: type_,
+                            //                     handle,
+                            //                 })
+                            //                 .unwrap();
+                            //         }
+                            //         None => println!("Unable to get file type"),
+                            //     },
+                            //     Err(err) => {
+                            //         println!("Failed to infer type of file: {err}");
+                            //     }
+                            // };
                             // self.streamable_gen_t.store(true, Ordering::SeqCst);
                         }
 
@@ -525,16 +393,16 @@ impl ApplicationHandler<UserEvent> for App {
                 //     continue;
                 // }
                 let content_type = media_type.mime_type().to_string();
-                println!("HELLO IM TRYING TO CAST A LOCAL FILE");
+                println!("HELLO IM TRYING TO CAST A LOCAL FILE {}", content_type);
                 match self.active_device.as_ref() {
                     Some(active_device) => {
                         if let Err(dev_err) = active_device.load(LoadRequest::Url {
-                            content_type,
+                            content_type: String::from("application/dash+xml"),
                             url: format!(
                                 "http://{}:{}/stream/{}",
                                 local_ip_address::local_ip().unwrap().to_string(),
                                 self.web_config.port,
-                                handle.to_str().unwrap().replace(MAIN_SEPARATOR_STR, "<<")
+                                "manifest.mpd"
                             ),
                             resume_position: None,
                             speed: None,

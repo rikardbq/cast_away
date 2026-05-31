@@ -7,6 +7,7 @@ target/
 assets/
 hls/
 dash/
+cache/
 ffmpeg*/
 !frontend/src/assets/
 

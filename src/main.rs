@@ -1,13 +1,12 @@
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use cast_away::{
-    ASSETS_ROOT_DIR, HOST, KIOSK_SCRIPT, PORT,
-    application::app::{App, UserEvent},
-    get_or_default_env,
+    ASSETS_ROOT_DIR, HOST, KIOSK_SCRIPT, PORT, application::UserEvent, application::app::App,
+    get_application_root_dir, get_or_default_env,
 };
-use ffmpeg_sidecar::paths::{ffmpeg_path, sidecar_path};
-use std::env;
+use ffmpeg_sidecar::paths::sidecar_path;
 use std::path::{MAIN_SEPARATOR_STR, PathBuf};
+use std::{env, path::Path};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 use actix_files::{Files, NamedFile};
@@ -29,10 +28,15 @@ async fn media_handler(path: web::Path<String>) -> actix_web::Result<impl Respon
 }
 
 async fn hls_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
-    let file = path.into_inner();
+    let p = path.into_inner();
+    let file_path = get_application_root_dir()
+        .join(Path::new("cache"))
+        .join(Path::new(&p));
 
-    if file.ends_with(".m3u8") {
-        Ok(NamedFile::open(format!("./hls/{}", file))?
+    println!("HLS handler file_path: {:?}", file_path);
+
+    if file_path.ends_with(".m3u8") {
+        Ok(NamedFile::open(format!("{}", file_path.to_string_lossy()))?
             .use_etag(false)
             .use_last_modified(false)
             .customize()
@@ -40,7 +44,7 @@ async fn hls_handler(path: web::Path<String>) -> actix_web::Result<impl Responde
             // .insert_header(("Content-Type", "application/x-mpegURL"))
             .insert_header(("Cache-Control", "no-cache")))
     } else {
-        Ok(NamedFile::open(format!("./hls/{}", file))?
+        Ok(NamedFile::open(format!("{}", file_path.to_string_lossy()))?
             .use_etag(false)
             .use_last_modified(false)
             .customize()
@@ -50,17 +54,22 @@ async fn hls_handler(path: web::Path<String>) -> actix_web::Result<impl Responde
 }
 
 async fn dash_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
-    let file = path.into_inner();
+    let p = path.into_inner();
+    let file_path = get_application_root_dir()
+        .join(Path::new("cache"))
+        .join(Path::new(&p));
 
-    if file.ends_with(".mpd") {
-        Ok(NamedFile::open(format!("./dash/{}", file))?
+    println!("DASH handler file_path: {:?}", file_path);
+
+    if p.ends_with(".mpd") {
+        Ok(NamedFile::open(format!("{}", file_path.to_string_lossy()))?
             .use_etag(false)
             .use_last_modified(false)
             .customize()
             .insert_header(("Content-Type", "application/dash+xml"))
             .insert_header(("Cache-Control", "no-cache")))
     } else {
-        Ok(NamedFile::open(format!("./dash/{}", file))?
+        Ok(NamedFile::open(format!("{}", file_path.to_string_lossy()))?
             .use_etag(false)
             .use_last_modified(false)
             .customize()
@@ -71,10 +80,28 @@ async fn dash_handler(path: web::Path<String>) -> actix_web::Result<impl Respond
 }
 
 async fn stream_video(path: web::Path<String>) -> impl Responder {
-    let p = path.into_inner().replace("<<", MAIN_SEPARATOR_STR);
-    let file = tokio::fs::File::open(p).await.unwrap();
-    let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
-    HttpResponse::Ok().streaming(stream)
+    let p = path.into_inner();
+    let file_path = get_application_root_dir()
+        .join(Path::new("cache"))
+        .join(Path::new(&p));
+    // .replace("<<", MAIN_SEPARATOR_STR);
+    println!("Stream handler file_path: {:?}", file_path);
+    if p.ends_with(".mpd") {
+        let file = tokio::fs::File::open(file_path).await.unwrap();
+        let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+        HttpResponse::Ok()
+            .append_header(("Content-Type", "application/dash+xml"))
+            .append_header(("Cache-Control", "no-cache"))
+            .streaming(stream)
+    } else {
+        let file = tokio::fs::File::open(get_application_root_dir().join(Path::new(&p)))
+            .await
+            .unwrap();
+        let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+        HttpResponse::Ok()
+            .append_header(("Content-Type", "video/iso.segment"))
+            .streaming(stream)
+    }
 }
 
 async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
@@ -89,10 +116,7 @@ async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
 // #[actix_web::main]
 #[tokio::main]
 async fn main() {
-    println!(
-        "{}",
-        sidecar_path().unwrap().to_string_lossy()
-    );
+    println!("{}", sidecar_path().unwrap().to_string_lossy());
     let srv_host = get_or_default_env("SRV_HOST", HOST);
     let srv_port = get_or_default_env("SRV_PORT", PORT);
     let srv_root = get_or_default_env("SRV_ROOT", ASSETS_ROOT_DIR);
