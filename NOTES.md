@@ -1,5 +1,10 @@
 ### Notes to self (RUST)
 
+- TAURI
+    - tauri/cef-rs (may enable the possibility of running the Chrome-Web-sender-SDK)
+        - https://github.com/tauri-apps/cef-rs
+        - try something with embedded chrome
+
 - FFMPEG
     - mp4:
         - `ffmpeg -i .\Arcane.S02E01.Heavy.Is.the.Crown.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv -vf "subtitles=Arcane.S02E01.Heavy.Is.the.Crown.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv:si=30" -movflags frag_keyframe+empty_moov+faststart test.mkv`
