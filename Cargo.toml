@@ -22,6 +22,8 @@ infer = "0.19.0"
 rfd = "0.17.2"
 local-ip-address = "0.6.13"
 ffmpeg-sidecar = "2.5.1"
+rust_cast = "0.21.0"
+mdns-sd = "0.20.0"
 
 [build-dependencies]
 ffmpeg-sidecar = "2.5.1"
