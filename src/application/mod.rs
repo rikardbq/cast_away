@@ -1,13 +1,19 @@
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
+use fcast_sender_sdk::device;
 use fcast_sender_sdk::{
     DeviceDiscovererEventHandler,
     device::{
-        DeviceConnectionState, DeviceEventHandler, DeviceInfo, KeyEvent, MediaEvent, PlaybackState,
-        Source,
+        DeviceConnectionState, DeviceEventHandler, KeyEvent, MediaEvent, PlaybackState, Source,
     },
 };
 use mdns_sd::{ServiceDaemon, ServiceEvent};
+use rust_cast::ChannelMessage;
+use rust_cast::channels::connection::ConnectionResponse;
+use rust_cast::channels::heartbeat::HeartbeatResponse;
 use rust_cast::{
     CastDevice,
     channels::{
@@ -18,16 +24,18 @@ use rust_cast::{
 use serde::{Deserialize, Serialize};
 use winit::event_loop::EventLoopProxy;
 
+use crate::MDNS_SERVICE_TYPE;
+
 pub mod app;
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub enum IpcMethod {
     ListFiles,
     DiscoverDevices,
     ConnectToDevice,
     DisconnectFromDevice,
     RequestCastLocal,
+    Heartbeat,
     #[serde(other)]
     Unknown,
 }
@@ -45,6 +53,17 @@ struct IpcResponse {
     result: Option<serde_json::Value>,
 }
 
+#[derive(Serialize)]
+pub enum IpcPostMessageKind {
+    DeviceDiscovered,
+}
+
+#[derive(Serialize)]
+pub struct IpcPostMessage {
+    kind: IpcPostMessageKind,
+    data: Option<serde_json::Value>,
+}
+
 #[derive(Debug)]
 pub enum DeviceEvent {
     ConnectionStateChanged(DeviceConnectionState),
@@ -59,11 +78,14 @@ pub enum DeviceEvent {
 #[derive(Debug)]
 pub enum UserEvent {
     ExecEval(String),
+    DeviceDiscovered(DeviceInfo),
+    ConnectToDevice(String),
+    DeviceConnected,
+    DeviceMessage(ChannelMessage),
     Quit,
-    DeviceAvailable(DeviceInfo),
+    DeviceAvailable(device::DeviceInfo),
     DeviceRemoved(String),
-    DeviceChanged(DeviceInfo),
-    Connect(String),
+    DeviceChanged(device::DeviceInfo),
     Disconnect,
     FromDevice {
         id: usize,
@@ -78,24 +100,112 @@ pub enum UserEvent {
 }
 
 // new tech start
-#[derive(Debug)]
-pub enum CastEvent {
-    DeviceDiscovered(Option<String>)
-}
-
 pub struct DeviceDiscoveryEventHandler {
-    event_proxy: EventLoopProxy<CastEvent>,
+    event_proxy: EventLoopProxy<UserEvent>,
 }
 
 impl DeviceDiscoveryEventHandler {
-    pub fn new(event_proxy: EventLoopProxy<CastEvent>) -> Self {
+    pub fn new(event_proxy: EventLoopProxy<UserEvent>) -> Self {
         Self { event_proxy }
     }
-    pub fn device_discovered(&self, device_info: Option<String>) {
+    pub fn device_discovered(&self, device_info: DeviceInfo) {
         let event_proxy = self.event_proxy.clone();
         event_proxy
-            .send_event(CastEvent::DeviceDiscovered(device_info))
+            .send_event(UserEvent::DeviceDiscovered(device_info))
             .expect("Failed to send event");
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeviceInfo {
+    // td: String,
+    // s_td: Option<String>,
+    name: String,
+    address: String,
+    port: u16,
+    // eventual TXTProps we need to extract
+}
+
+impl DeviceInfo {
+    pub fn new(name: String, address: String, port: u16) -> Self {
+        Self {
+            name,
+            address,
+            port,
+        }
+    }
+}
+
+pub struct CastContext<'a> {
+    cast_device: Option<CastDevice<'a>>,
+}
+
+impl<'a> CastContext<'a> {
+    pub fn new() -> Self {
+        Self { cast_device: None }
+    }
+    pub fn set_cast_device(&mut self, cast_device: CastDevice<'a>) {
+        self.cast_device = Some(cast_device);
+    }
+    pub fn discover_devices(
+        mdns_daemon: Arc<ServiceDaemon>,
+        event_handler: Arc<DeviceDiscoveryEventHandler>,
+    ) {
+        thread::spawn(move || {
+            let receiver = mdns_daemon
+                .browse(MDNS_SERVICE_TYPE)
+                .expect("Failed to browse mDNS services.");
+            while let Ok(event) = receiver.recv_timeout(Duration::from_secs(10)) {
+                match event {
+                    ServiceEvent::ServiceResolved(info) => {
+                        if let Some(address) = info
+                            .get_addresses()
+                            .iter()
+                            .map(|a| a.to_string())
+                            .collect::<Vec<String>>()
+                            .first()
+                        {
+                            println!("{}", info.get_properties());
+                            event_handler.device_discovered(DeviceInfo::new(
+                                info.get_property_val_str("fn")
+                                    .unwrap_or(info.get_fullname())
+                                    .to_string(),
+                                address.clone(),
+                                info.get_port(),
+                            ));
+                        } else {
+                            continue;
+                        }
+                    }
+                    other_event => {
+                        println!(
+                            "{}{}",
+                            "Received other service event: ",
+                            format!("{:?}", other_event)
+                        );
+                    }
+                }
+            }
+            println!("exit while!");
+        });
+    }
+    pub fn device_listen(
+        cast_device: CastDevice,
+        event_proxy: Arc<&EventLoopProxy<UserEvent>>,
+    ) {
+        loop {
+            match cast_device.receive() {
+                Ok(message) => {
+                    event_proxy
+                        .send_event(UserEvent::DeviceMessage(message))
+                        .ok();
+                }
+                Err(err) => {
+                    eprintln!("Cast receive error: {err}");
+                    break;
+                }
+            }
+        }
     }
 }
 // new tech end
@@ -111,7 +221,7 @@ impl DiscoveryEventHandler {
 }
 
 impl DeviceDiscovererEventHandler for DiscoveryEventHandler {
-    fn device_available(&self, device_info: DeviceInfo) {
+    fn device_available(&self, device_info: device::DeviceInfo) {
         let event_proxy = self.event_proxy.clone();
         event_proxy
             .send_event(UserEvent::DeviceAvailable(device_info))
@@ -125,7 +235,7 @@ impl DeviceDiscovererEventHandler for DiscoveryEventHandler {
             .expect("Failed to send event");
     }
 
-    fn device_changed(&self, device_info: DeviceInfo) {
+    fn device_changed(&self, device_info: device::DeviceInfo) {
         let event_proxy = self.event_proxy.clone();
         event_proxy
             .send_event(UserEvent::DeviceChanged(device_info))
@@ -210,43 +320,6 @@ impl WebConfig {
     pub fn set_port(&mut self, port: usize) {
         self.port = port;
     }
-}
-
-const SERVICE_TYPE: &str = "_googlecast._tcp.local.";
-
-fn discover() -> Option<(String, u16)> {
-    let mdns = ServiceDaemon::new().expect("Failed to create mDNS daemon.");
-    let receiver = mdns
-        .browse(SERVICE_TYPE)
-        .expect("Failed to browse mDNS services.");
-
-    while let Ok(event) = receiver.recv() {
-        match event {
-            ServiceEvent::ServiceResolved(info) => {
-                let mut addresses = info
-                    .get_addresses()
-                    .iter()
-                    .map(|address| address.to_string())
-                    .collect::<Vec<_>>();
-                println!(
-                    "{}{}",
-                    "Resolved a new service: ",
-                    format!("{} ({})", info.get_fullname(), addresses.join(", "))
-                );
-
-                // Based on mDNS crate code we should have at least one address available.
-                return Some((addresses.remove(0), info.get_port()));
-            }
-            other_event => {
-                println!(
-                    "{}{}",
-                    "Received other service event: ",
-                    format!("{:?}", other_event)
-                );
-            }
-        }
-    }
-    None
 }
 
 fn play_media(

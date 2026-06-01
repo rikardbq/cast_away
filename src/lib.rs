@@ -232,6 +232,9 @@ style.innerHTML = `
 document.head.appendChild(style);
 "#;
 
+pub const MDNS_SERVICE_TYPE: &str = "_googlecast._tcp.local.";
+pub const DEFAULT_CAST_DESTINATION_ID: &str = "receiver-0";
+
 pub fn get_or_default_env(env_var: &str, default: &str) -> String {
     env::var(env_var).unwrap_or(default.to_string())
 }

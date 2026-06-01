@@ -116,6 +116,9 @@ async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
 // #[actix_web::main]
 #[tokio::main]
 async fn main() {
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("failed to install rustls provider");
     println!("{}", sidecar_path().unwrap().to_string_lossy());
     let srv_host = get_or_default_env("SRV_HOST", HOST);
     let srv_port = get_or_default_env("SRV_PORT", PORT);

@@ -661,6 +661,7 @@ dependencies = [
  "mdns-sd 0.20.0",
  "rfd",
  "rust_cast",
+ "rustls",
  "serde",
  "serde_json",
  "tokio",
