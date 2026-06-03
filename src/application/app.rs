@@ -6,7 +6,7 @@ use rust_cast::{
     channels::{
         connection::ConnectionResponse,
         heartbeat::{HeartbeatChannel, HeartbeatResponse},
-        media::Media,
+        media::{Media, MovieMediaMetadata},
         receiver::CastDeviceApp,
     },
 };
@@ -321,15 +321,15 @@ impl<'a> ApplicationHandler<UserEvent> for App<'a> {
                                 cast_device.connection.connect(DEFAULT_CAST_DESTINATION_ID)
                             {
                                 let proxy_clone = self.event_proxy.clone();
-                                let status = cast_device.receiver.get_status().unwrap();
-                                let app = status
-                                    .applications
-                                    .first()
-                                    .expect("No application registered");
+                                // let status = cast_device.receiver.get_status().unwrap();
+                                // let app = status
+                                //     .applications
+                                //     .first()
+                                //     .expect("No application registered");
                                 self.cast_context.set_cast_device(cast_device);
                                 proxy_clone
                                     .send_event(UserEvent::DeviceConnected(
-                                        CastDeviceApp::from_str(&app.app_id).unwrap(),
+                                        CastDeviceApp::DefaultMediaReceiver,
                                     ))
                                     .expect("Failed to send event DeviceConnected");
 
@@ -357,42 +357,64 @@ impl<'a> ApplicationHandler<UserEvent> for App<'a> {
             }
             UserEvent::DeviceConnected(device_app) => {
                 println!("DEVICE CONNECTED");
-                let cast_device = self.cast_context.cast_device.as_ref().unwrap();
-                let app = cast_device.receiver.launch_app(&device_app).unwrap();
-                println!(
-                    "APPLICATIONS {:?}\n{}",
-                    cast_device.receiver.get_status().unwrap().applications,
-                    app.app_id
-                );
-                if let Ok(_) = cast_device.connection.disconnect(DEFAULT_CAST_DESTINATION_ID) {
+                if let Some(cast_device) = &self.cast_context.cast_device {
+                    let app = cast_device.receiver.launch_app(&device_app).unwrap();
+                    println!(
+                        "APPLICATIONS {:?}\n{}",
+                        cast_device.receiver.get_status().unwrap().applications,
+                        app.app_id
+                    );
+                    // if let Ok(_) = cast_device.connection.disconnect(DEFAULT_CAST_DESTINATION_ID) {
                     if let Ok(_) = cast_device.connection.connect(&app.transport_id) {
-                        let media = cast_device
+                        let proxy_clone = self.event_proxy.clone();
+                        let url = format!(
+                            "http://{}:{}/test",
+                            local_ip_address::local_ip().unwrap().to_string(),
+                            self.web_config.port
+                        );
+                        println!("AAAAAAAAAAAAAA {}", &url);
+                        println!("APP TRANSPORT ID = {}", &app.transport_id);
+                        match cast_device
                             .media
                             .load(
                                 &app.transport_id,
                                 &app.session_id,
                                 &Media {
+                                    
                                     duration: None,
-                                    content_type: "video/mp4".to_string(),
+                                    content_type: "video/*".to_string(),
                                     metadata: None,
-                                    content_id: format!(
-                                        "http://{}:{}/test/{}",
-                                        local_ip_address::local_ip().unwrap().to_string(),
-                                        self.web_config.port,
-                                        "manifest.mpd"
-                                    ),
+                                    content_id: url,
                                     stream_type: rust_cast::channels::media::StreamType::Buffered,
                                 },
-                            )
-                            .unwrap();
-                        let media_sid = media.entries.first().unwrap().media_session_id;
-                        cast_device
-                            .media
-                            .play(&app.transport_id, media_sid)
-                            .unwrap();
-                    }
-                };
+                            ) {
+                                Ok(_) => {},
+                                Err(e) => {
+                                    println!("error {e}");
+                                }
+                            }
+                        // let media_status_entry = media_status.entries.first().unwrap();
+                        // proxy_clone
+                        //     .send_event(UserEvent::DevicePlayMedia {
+                        //         app,
+                        //         media_session_id: media_status_entry.media_session_id,
+                        //     })
+                        //     .expect("Failed to send event DevicePlayMedia");
+                    };
+                }
+                // let cast_device = self.cast_context.cast_device.as_ref().unwrap();
                 // can assume device connection has been correctly done and now cast media
+            }
+            UserEvent::DevicePlayMedia {
+                app,
+                media_session_id,
+            } => {
+                if let Some(cast_device) = &self.cast_context.cast_device {
+                    cast_device
+                        .media
+                        .play(&app.transport_id, media_session_id)
+                        .unwrap();
+                }
             }
             // this cannot run in separate thread for now, so comment out since it needs blocking steps to even function
             // UserEvent::DeviceMessage(message) => match message {

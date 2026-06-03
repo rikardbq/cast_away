@@ -17,10 +17,35 @@ use winit::{
     window::{Fullscreen, Window},
 };
 
-async fn test_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
-    let p = path.into_inner();
+async fn test_handler() -> 
+actix_web::Result<
+impl Responder
+> 
+{
     let file_path = get_application_root_dir()
-        .join(Path::new("ffmpeg_stuff/5621903-hd_1920_1080_25fps.mp4"));
+        .join(Path::new("ffmpeg_stuff/Arcane.S02E01.Heavy.Is.the.Crown.1080p.NF.WEB-DL.DDP5.1.Atmos.H.264-FLUX.mkv"));
+    // .replace("<<", MAIN_SEPARATOR_STR);
+    println!("Stream handler file_path: {:?}", file_path);
+    Ok(NamedFile::open(file_path)?
+        .use_etag(false)
+        .use_last_modified(false)
+        .customize()
+        // .insert_header(("Content-Type", "video/mp4"))
+        .insert_header(("Cache-Control", "no-store")))
+    // let file = tokio::fs::File::open(file_path).await.unwrap();
+    // let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+    // HttpResponse::Ok()
+    //     .append_header(("Content-Type", "video/mp4"))
+    //     .append_header(("Cache-Control", "no-cache"))
+    //     .streaming(stream)
+}
+async fn test_subs_handler() -> 
+actix_web::Result<
+impl Responder
+> 
+{
+    let file_path = get_application_root_dir()
+        .join(Path::new("ffmpeg_stuff/subs.srt"));
     // .replace("<<", MAIN_SEPARATOR_STR);
     println!("Stream handler file_path: {:?}", file_path);
     Ok(NamedFile::open(file_path)?
@@ -148,7 +173,8 @@ async fn main() {
         HttpServer::new(move || {
             actix_web::App::new()
                 .route("/", web::get().to(index))
-                .route("/test/{file_name}", web::get().to(test_handler))
+                .route("/test", web::get().to(test_handler))
+                .route("/test_subs", web::get().to(test_subs_handler))
                 .route("/media/{file_name}", web::get().to(media_handler))
                 .route("/hls/{file_name}", web::get().to(hls_handler))
                 .route("/dash/{file_name}", web::get().to(dash_handler))

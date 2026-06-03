@@ -14,6 +14,7 @@ use mdns_sd::{ServiceDaemon, ServiceEvent};
 use rust_cast::ChannelMessage;
 use rust_cast::channels::connection::ConnectionResponse;
 use rust_cast::channels::heartbeat::HeartbeatResponse;
+use rust_cast::channels::receiver::Application;
 use rust_cast::{
     CastDevice,
     channels::{
@@ -81,6 +82,10 @@ pub enum UserEvent {
     DeviceDiscovered(DeviceInfo),
     ConnectToDevice(String),
     DeviceConnected(CastDeviceApp),
+    DevicePlayMedia {
+        app: Application,
+        media_session_id: i32,
+    },
     DeviceMessage(ChannelMessage),
     Quit,
     DeviceAvailable(device::DeviceInfo),
