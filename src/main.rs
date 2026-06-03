@@ -1,7 +1,7 @@
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use cast_away::{
-    ASSETS_ROOT_DIR, HOST, KIOSK_SCRIPT, PORT, application::UserEvent, application::app::App,
+    ASSETS_ROOT_DIR, B64, HOST, KIOSK_SCRIPT, PORT, application::UserEvent, application::app::App,
     get_application_root_dir, get_or_default_env,
 };
 use ffmpeg_sidecar::paths::sidecar_path;
@@ -80,12 +80,12 @@ async fn dash_handler(path: web::Path<String>) -> actix_web::Result<impl Respond
 }
 
 async fn stream_video(path: web::Path<String>) -> impl Responder {
-    let file_path = path.into_inner().replace("<<<", MAIN_SEPARATOR_STR);
+    let file_path = B64::decode_str(&path.into_inner());
     println!("Stream handler file_path: {:?}", file_path);
     let file = tokio::fs::File::open(file_path).await.unwrap();
     let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
     HttpResponse::Ok()
-        .append_header(("Content-Type", "video/*"))
+        // .append_header(("Content-Type", "video/*"))
         .append_header(("Cache-Control", "no-cache"))
         .streaming(stream)
 }

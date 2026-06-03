@@ -27,7 +27,7 @@ use winit::{
 use wry::{WebView, WebViewBuilder};
 
 use crate::{
-    ASSETS_ROOT_DIR, IPC_HANDLER_INIT_SCRIPT,
+    ASSETS_ROOT_DIR, B64, IPC_HANDLER_INIT_SCRIPT,
     application::{
         DevEventHandler, DeviceEvent, DiscoveryEventHandler, IpcMethod, IpcPostMessage,
         IpcPostMessageKind, IpcRequest, IpcResponse, UserEvent, WebConfig,
@@ -352,6 +352,24 @@ impl ApplicationHandler<UserEvent> for App {
                                 // ))
                                 // .expect("Failed to evaluate script");
                                 if let Some(active_device) = &self.active_device {
+                                    // testing
+                                    if let Err(err) = active_device.load(LoadRequest::Url {
+                                        content_type: "image/jpeg".to_string(),
+                                        url: format!(
+                                            "http://{}:{}/stream/{}",
+                                            local_ip_address::local_ip().unwrap().to_string(),
+                                            self.web_config.port,
+                                            B64::encode_str("C:\\Users\\rikardbq\\my\\dev\\rust\\cast_away\\assets\\bundles\\mario-movie-poster-CbxToPYv.jpg")
+                                        ),
+                                        resume_position: None,
+                                        speed: None,
+                                        volume: None,
+                                        metadata: None,
+                                        request_headers: None,
+                                    }) {
+                                        println!("{err:?}");
+                                    };
+                                    // testing end
                                     if active_device
                                         .supports_feature(DeviceFeature::MediaEventSubscription)
                                     {
@@ -406,15 +424,15 @@ impl ApplicationHandler<UserEvent> for App {
                 // }
                 let content_type = media_type.mime_type().to_string();
                 println!("HELLO IM TRYING TO CAST A LOCAL FILE {}", content_type);
-                match self.active_device.as_ref() {
+                match &self.active_device {
                     Some(active_device) => {
                         if let Err(dev_err) = active_device.load(LoadRequest::Url {
-                            content_type: "video/*".to_string(),
+                            content_type,
                             url: format!(
                                 "http://{}:{}/stream/{}",
                                 local_ip_address::local_ip().unwrap().to_string(),
                                 self.web_config.port,
-                                handle.to_string_lossy().replace(MAIN_SEPARATOR_STR, "<<<")
+                                B64::encode_str(&handle.to_string_lossy())
                             ),
                             resume_position: None,
                             speed: None,

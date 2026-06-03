@@ -631,6 +631,7 @@ version = "0.1.0"
 dependencies = [
  "actix-files",
  "actix-web",
+ "base64",
  "fcast-sender-sdk",
  "ffmpeg-sidecar",
  "futures",

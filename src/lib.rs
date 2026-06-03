@@ -1,3 +1,4 @@
+use base64::{Engine as _, engine::general_purpose::URL_SAFE};
 use std::{
     env,
     path::{Path, PathBuf},
@@ -238,9 +239,32 @@ pub fn get_or_default_env(env_var: &str, default: &str) -> String {
 
 pub fn get_application_root_dir() -> PathBuf {
     if cfg!(debug_assertions) {
-        return Path::new("./").to_path_buf()
+        return Path::new("./").to_path_buf();
     }
 
     let exec_path = env::current_exe().unwrap();
     exec_path.parent().unwrap().to_path_buf()
+}
+
+enum B64Op {
+    Encode,
+    Decode,
+}
+
+pub struct B64;
+impl B64 {
+    fn get_text(input: &str, op: B64Op) -> String {
+        match op {
+            B64Op::Encode => URL_SAFE.encode(input),
+            B64Op::Decode => {
+                String::from_utf8(URL_SAFE.decode(input).expect("failed to decode input")).unwrap()
+            }
+        }
+    }
+    pub fn encode_str(input: &str) -> String {
+        Self::get_text(input, B64Op::Encode)
+    }
+    pub fn decode_str(input: &str) -> String {
+        Self::get_text(input, B64Op::Decode)
+    }
 }
