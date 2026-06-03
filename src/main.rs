@@ -13,9 +13,29 @@ use actix_files::{Files, NamedFile};
 use actix_web::{HttpRequest, HttpResponse, HttpServer, Responder, web};
 use futures::StreamExt;
 use winit::{
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
     window::{Fullscreen, Window},
 };
+
+async fn test_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
+    let p = path.into_inner();
+    let file_path = get_application_root_dir()
+        .join(Path::new("ffmpeg_stuff/5621903-hd_1920_1080_25fps.mp4"));
+    // .replace("<<", MAIN_SEPARATOR_STR);
+    println!("Stream handler file_path: {:?}", file_path);
+    Ok(NamedFile::open(file_path)?
+        .use_etag(false)
+        .use_last_modified(false)
+        .customize()
+        // .insert_header(("Content-Type", "video/mp4"))
+        .insert_header(("Cache-Control", "no-store")))
+    // let file = tokio::fs::File::open(file_path).await.unwrap();
+    // let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+    // HttpResponse::Ok()
+    //     .append_header(("Content-Type", "video/mp4"))
+    //     .append_header(("Cache-Control", "no-cache"))
+    //     .streaming(stream)
+}
 
 async fn media_handler(path: web::Path<String>) -> actix_web::Result<impl Responder> {
     let file = path.into_inner().replace("<<", MAIN_SEPARATOR_STR);
@@ -128,6 +148,7 @@ async fn main() {
         HttpServer::new(move || {
             actix_web::App::new()
                 .route("/", web::get().to(index))
+                .route("/test/{file_name}", web::get().to(test_handler))
                 .route("/media/{file_name}", web::get().to(media_handler))
                 .route("/hls/{file_name}", web::get().to(hls_handler))
                 .route("/dash/{file_name}", web::get().to(dash_handler))
@@ -151,6 +172,7 @@ async fn main() {
         _ => (),
     });
 
+    // event_loop.set_control_flow(ControlFlow::Poll);
     event_loop.run_app(&mut app).unwrap();
     web_srv.abort();
 }

@@ -6,13 +6,16 @@ use rust_cast::{
     channels::{
         connection::ConnectionResponse,
         heartbeat::{HeartbeatChannel, HeartbeatResponse},
+        media::Media,
+        receiver::CastDeviceApp,
     },
 };
 use std::{
     fs,
     path::{MAIN_SEPARATOR_STR, Path},
+    str::FromStr,
     sync::{Arc, Mutex},
-    thread,
+    thread::{self, JoinHandle},
     time::Duration,
 };
 use winit::{
@@ -160,25 +163,6 @@ impl<'a> ApplicationHandler<UserEvent> for App<'a> {
                             .unwrap();
                         None
                     }
-                    IpcMethod::Heartbeat => {
-                        let device_info: DeviceInfo = serde_json::from_value(req.params).unwrap();
-                        println!("SPECIALLLL {:?}", device_info);
-                         match CastDevice::connect_without_host_verification(
-                            device_info.address,
-                            device_info.port,
-                        ) {
-                            Ok(cast_device) => {
-                                if let Ok(_) = cast_device
-                                    .connection
-                                    .connect(DEFAULT_CAST_DESTINATION_ID.to_string())
-                                {
-                                    cast_device.heartbeat.ping().unwrap();
-                                }
-                            }
-                            _ => {}
-                        }
-                        None
-                    }
                     IpcMethod::RequestCastLocal => {
                         let file_path = FileDialog::new()
                             .add_filter(
@@ -322,68 +306,112 @@ impl<'a> ApplicationHandler<UserEvent> for App<'a> {
                 .expect("Failed to evaluate script");
             }
             UserEvent::ConnectToDevice(device_name) => {
-                let event_proxy_clone = self.event_proxy.clone();
-                let devices_clone = self.devices.clone();
-                thread::spawn(move || {
-                    if let Some(device_info) = devices_clone
-                        .iter()
-                        .find(|device| device.name == device_name)
-                        .cloned()
-                    {
-                        println!("{:?}", device_info);
-                        match CastDevice::connect_without_host_verification(
-                            device_info.address,
-                            device_info.port,
-                        ) {
-                            Ok(cast_device) => {
-                                if let Ok(_) = cast_device
-                                    .connection
-                                    .connect(DEFAULT_CAST_DESTINATION_ID.to_string())
-                                {
-                                    cast_device.heartbeat.ping().unwrap();
-                                    loop {
-                                        match cast_device.receive() {
-                                            Ok(message) => {
-                                                event_proxy_clone
-                                                    .send_event(UserEvent::DeviceMessage(message))
-                                                    .ok();
-                                            }
-                                            Err(err) => {
-                                                eprintln!("Cast receive error: {err}");
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
+                if let Some(device_info) = self
+                    .devices
+                    .iter()
+                    .find(|device| device.name == device_name)
+                    .cloned()
+                {
+                    match CastDevice::connect_without_host_verification(
+                        device_info.address,
+                        device_info.port,
+                    ) {
+                        Ok(cast_device) => {
+                            if let Ok(_) =
+                                cast_device.connection.connect(DEFAULT_CAST_DESTINATION_ID)
+                            {
+                                let proxy_clone = self.event_proxy.clone();
+                                let status = cast_device.receiver.get_status().unwrap();
+                                let app = status
+                                    .applications
+                                    .first()
+                                    .expect("No application registered");
+                                self.cast_context.set_cast_device(cast_device);
+                                proxy_clone
+                                    .send_event(UserEvent::DeviceConnected(
+                                        CastDeviceApp::from_str(&app.app_id).unwrap(),
+                                    ))
+                                    .expect("Failed to send event DeviceConnected");
+
+                                // comment out because this blocks and cannot be spawned in another thread or execution context due to implementation limits of cast_device type from rust-cast
+                                // loop {
+                                //     match cast_device.receive() {
+                                //         Ok(message) => {
+                                //             event_proxy_clone
+                                //                 .send_event(UserEvent::DeviceMessage(message))
+                                //                 .ok();
+                                //         }
+                                //         Err(err) => {
+                                //             eprintln!("Cast receive error: {err}");
+                                //             continue;
+                                //         }
+                                //     }
+                                // }
                             }
-                            Err(e) => {
-                                eprintln!("Could not establish connection with Cast Device: {e:?}");
-                            }
-                        };
-                    }
-                });
+                        }
+                        Err(e) => {
+                            eprintln!("Could not establish connection with Cast Device: {e:?}");
+                        }
+                    };
+                }
             }
-            UserEvent::DeviceMessage(message) => match message {
-                ChannelMessage::Connection(response) => {
-                    println!("Connection message: {response:?}");
-                }
-                ChannelMessage::Heartbeat(response) => {
-                    println!("Heartbeat message: {response:?}");
-                }
-                ChannelMessage::Media(response) => {
-                    println!("Media message: {response:?}");
-                }
-                ChannelMessage::Receiver(response) => {
-                    println!("Receiver message: {response:?}");
-                }
-                ChannelMessage::Raw(response) => {
-                    println!("Raw message: {response:?}");
-                }
-            },
-            UserEvent::DeviceConnected => {
+            UserEvent::DeviceConnected(device_app) => {
                 println!("DEVICE CONNECTED");
+                let cast_device = self.cast_context.cast_device.as_ref().unwrap();
+                let app = cast_device.receiver.launch_app(&device_app).unwrap();
+                println!(
+                    "APPLICATIONS {:?}\n{}",
+                    cast_device.receiver.get_status().unwrap().applications,
+                    app.app_id
+                );
+                if let Ok(_) = cast_device.connection.disconnect(DEFAULT_CAST_DESTINATION_ID) {
+                    if let Ok(_) = cast_device.connection.connect(&app.transport_id) {
+                        let media = cast_device
+                            .media
+                            .load(
+                                &app.transport_id,
+                                &app.session_id,
+                                &Media {
+                                    duration: None,
+                                    content_type: "video/mp4".to_string(),
+                                    metadata: None,
+                                    content_id: format!(
+                                        "http://{}:{}/test/{}",
+                                        local_ip_address::local_ip().unwrap().to_string(),
+                                        self.web_config.port,
+                                        "manifest.mpd"
+                                    ),
+                                    stream_type: rust_cast::channels::media::StreamType::Buffered,
+                                },
+                            )
+                            .unwrap();
+                        let media_sid = media.entries.first().unwrap().media_session_id;
+                        cast_device
+                            .media
+                            .play(&app.transport_id, media_sid)
+                            .unwrap();
+                    }
+                };
                 // can assume device connection has been correctly done and now cast media
             }
+            // this cannot run in separate thread for now, so comment out since it needs blocking steps to even function
+            // UserEvent::DeviceMessage(message) => match message {
+            //     ChannelMessage::Connection(response) => {
+            //         println!("Connection message: {response:?}");
+            //     }
+            //     ChannelMessage::Heartbeat(response) => {
+            //         println!("Heartbeat message: {response:?}");
+            //     }
+            //     ChannelMessage::Media(response) => {
+            //         println!("Media message: {response:?}");
+            //     }
+            //     ChannelMessage::Receiver(response) => {
+            //         println!("Receiver message: {response:?}");
+            //     }
+            //     ChannelMessage::Raw(response) => {
+            //         println!("Raw message: {response:?}");
+            //     }
+            // },
             // TODO: see if rust-cast can look at device events
             // UserEvent::FromDevice { id, event } => {
             //     if id == self.current_device_id {

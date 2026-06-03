@@ -80,7 +80,7 @@ pub enum UserEvent {
     ExecEval(String),
     DeviceDiscovered(DeviceInfo),
     ConnectToDevice(String),
-    DeviceConnected,
+    DeviceConnected(CastDeviceApp),
     DeviceMessage(ChannelMessage),
     Quit,
     DeviceAvailable(device::DeviceInfo),
@@ -189,10 +189,7 @@ impl<'a> CastContext<'a> {
             println!("exit while!");
         });
     }
-    pub fn device_listen(
-        cast_device: CastDevice,
-        event_proxy: Arc<&EventLoopProxy<UserEvent>>,
-    ) {
+    pub fn device_listen(cast_device: CastDevice, event_proxy: Arc<&EventLoopProxy<UserEvent>>) {
         loop {
             match cast_device.receive() {
                 Ok(message) => {
