@@ -352,24 +352,21 @@ impl ApplicationHandler<UserEvent> for App {
                                 // ))
                                 // .expect("Failed to evaluate script");
                                 if let Some(active_device) = &self.active_device {
-                                    // testing
-                                    if let Err(err) = active_device.load(LoadRequest::Url {
-                                        content_type: "image/jpeg".to_string(),
+                                    // splash
+                                    if let Err(err) = active_device.load(LoadRequest::Image {
+                                        content_type: "image/*".to_string(),
                                         url: format!(
                                             "http://{}:{}/stream/{}",
                                             local_ip_address::local_ip().unwrap().to_string(),
                                             self.web_config.port,
                                             B64::encode_str("C:\\Users\\rikardbq\\my\\dev\\rust\\cast_away\\assets\\bundles\\mario-movie-poster-CbxToPYv.jpg")
                                         ),
-                                        resume_position: None,
-                                        speed: None,
-                                        volume: None,
                                         metadata: None,
                                         request_headers: None,
                                     }) {
                                         println!("{err:?}");
                                     };
-                                    // testing end
+                                    // splash end
                                     if active_device
                                         .supports_feature(DeviceFeature::MediaEventSubscription)
                                     {
