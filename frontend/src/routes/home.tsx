@@ -12,42 +12,50 @@ type HomeProps = {
 };
 
 export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
-    const [deviceNames, setDeviceNames] = useState<string[]>([]);
+    const [devices, setDevices] = useState<any[]>([]);
 
     useEffect(() => {
-        window.addEventListener("message", (event) => {
-            console.log("message from rust: ", event);
-            if (event.data) {
-                setDeviceNames((devices) => {
-                    const device = event.data as string;
-                    return devices.includes(device)
-                        ? devices
-                        : [...devices, device];
-                });
+        ipc.listen((ipcMessage) => {
+            if (ipcMessage) {
+                const { kind, data } = ipcMessage;
+                switch (kind) {
+                    case "DeviceDiscovered": {
+                        console.log(data);
+                        setDevices((devices) => {
+                            const deviceName = data.name;
+                            return devices.some((d) => d.name === deviceName)
+                                ? devices
+                                : [...devices, data];
+                        });
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
             }
         });
     }, []);
 
     return (
         <div>
-            {deviceNames.map((d) => (
-                <div>
+            {devices.map((d) => (
+                <div key={d.name}>
                     <button
-                        key={d}
                         className="btn btn-success"
                         onClick={() => {
-                            ipc.call("connectToDevice", {
-                                device_name: d,
+                            ipc.call("ConnectToDevice", {
+                                device_name: d.name,
                             });
                         }}
                     >
-                        {d}
+                        {d.name}
                     </button>
                 </div>
             ))}
             <button className="btn btn-success"
                         onClick={() => {
-                            ipc.call("requestCastLocal");
+                            ipc.call("RequestCastLocal");
                         }}>Cast local</button>
             <p>{`pressed : ${gamepads[0]?.buttons[0].pressed}`}</p>
             <div>
@@ -73,10 +81,8 @@ export default ({ gamepadUtils: { gamepads } }: HomeProps) => {
             </button>
             <button
                 className="btn btn-error"
-                onClick={async () => {
-                    const list = await ipc.call("listFiles");
-                    console.log(list);
-                    await ipc.call("discoverDevices");
+                onClick={() => {
+                    ipc.call("DiscoverDevices");
                 }}
             >
                 TESTING THIS IPC

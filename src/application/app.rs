@@ -16,6 +16,7 @@ use fcast_sender_sdk::{
 };
 use ffmpeg_sidecar::{child::FfmpegChild, command::FfmpegCommand};
 use rfd::FileDialog;
+use serde_json::json;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -28,8 +29,8 @@ use wry::{WebView, WebViewBuilder};
 use crate::{
     ASSETS_ROOT_DIR, IPC_HANDLER_INIT_SCRIPT,
     application::{
-        DevEventHandler, DeviceEvent, DiscoveryEventHandler, IpcMethod, IpcRequest, IpcResponse,
-        UserEvent, WebConfig,
+        DevEventHandler, DeviceEvent, DiscoveryEventHandler, IpcMethod, IpcPostMessage,
+        IpcPostMessageKind, IpcRequest, IpcResponse, UserEvent, WebConfig,
     },
     get_application_root_dir,
 };
@@ -157,7 +158,7 @@ impl ApplicationHandler<UserEvent> for App {
                     IpcMethod::ConnectToDevice => {
                         let device_name = req.params.get("device_name").unwrap();
                         self.event_proxy
-                            .send_event(UserEvent::Connect(
+                            .send_event(UserEvent::ConnectToDevice(
                                 serde_json::from_value::<String>(device_name.clone()).unwrap(),
                             ))
                             .unwrap();
@@ -185,102 +186,101 @@ impl ApplicationHandler<UserEvent> for App {
                                 }
                             }
                             let event_proxy = self.event_proxy.clone();
-                            let handle_clone = handle.clone();
                             // let streamable_gen_t_clone = Arc::clone(&self.streamable_gen_t);
                             // let subshell = Arc::clone(&self.subshell);
-                            thread::spawn(move || {
-                                let cache_dir = get_application_root_dir().join(Path::new("cache"));
-                                if !Path::is_dir(&cache_dir.as_path()) {
-                                    fs::create_dir_all(&cache_dir).unwrap();
-                                }
-                                let expected_out = &format!(
-                                    "{}{}manifest.mpd",
-                                    cache_dir.to_string_lossy(),
-                                    MAIN_SEPARATOR_STR,
-                                    // handle_clone
-                                    //     .extension()
-                                    //     .unwrap_or(&OsStr::new("mp4"))
-                                    //     .to_string_lossy()
-                                );
-                                let subs = handle_clone
-                                    .to_string_lossy()
-                                    .replace("C:", "")
-                                    .replace("\\", "/");
-                                let mut subshell_guard = subshell.lock().unwrap();
-                                *subshell_guard = Some(
-                                    FfmpegCommand::new()
-                                        .args([
-                                            "-i",
-                                            handle_clone.to_str().unwrap(),
-                                            "-vf",
-                                            &format!("subtitles={}:si=30", subs),
-                                            // "-movflags",
-                                            // "frag_keyframe+empty_moov+faststart",
-                                            // DASH
-                                            "-use_template",
-                                            "1",
-                                            "-use_timeline",
-                                            "1",
-                                            "-seg_duration",
-                                            "6",
-                                            "-f",
-                                            "dash",
-                                            // DASH END
-                                            // HLS
-                                            // "-f",
-                                            // "hls",
-                                            // "-hls_base_url",
-                                            // "/hls/",
-                                            // HLS END
-                                            "-y",
-                                        ])
-                                        .arg(expected_out)
-                                        .spawn()
-                                        .unwrap(),
-                                );
-                                while !Path::is_file(Path::new(expected_out)) {
-                                    std::thread::sleep(Duration::from_secs(1));
-                                }
-                                match infer::get_from_path(handle.clone()) {
-                                    Ok(res) => match res {
-                                        Some(type_) => {
-                                            event_proxy
-                                                .send_event(UserEvent::CastLocal {
-                                                    media_type: type_,
-                                                    handle,
-                                                })
-                                                .unwrap();
-                                        }
-                                        None => println!("Unable to get file type"),
-                                    },
-                                    Err(err) => {
-                                        println!("Failed to infer type of file: {err}");
-                                    }
-                                };
-                                // subshell_guard.take().unwrap().wait().unwrap();
-                                // let mut started = false;
-                                // while streamable_gen_t_clone.load(Ordering::SeqCst) {
-                                //     if !started {
-                                //         started = true;
-                                //     }
-                                // }
-                            });
-                            // match infer::get_from_path(handle.clone()) {
-                            //     Ok(res) => match res {
-                            //         Some(type_) => {
-                            //             event_proxy
-                            //                 .send_event(UserEvent::CastLocal {
-                            //                     media_type: type_,
-                            //                     handle,
-                            //                 })
-                            //                 .unwrap();
-                            //         }
-                            //         None => println!("Unable to get file type"),
-                            //     },
-                            //     Err(err) => {
-                            //         println!("Failed to infer type of file: {err}");
+                            // thread::spawn(move || {
+                            //     let cache_dir = get_application_root_dir().join(Path::new("cache"));
+                            //     if !Path::is_dir(&cache_dir.as_path()) {
+                            //         fs::create_dir_all(&cache_dir).unwrap();
                             //     }
-                            // };
+                            //     let expected_out = &format!(
+                            //         "{}{}manifest.mpd",
+                            //         cache_dir.to_string_lossy(),
+                            //         MAIN_SEPARATOR_STR,
+                            //         // handle_clone
+                            //         //     .extension()
+                            //         //     .unwrap_or(&OsStr::new("mp4"))
+                            //         //     .to_string_lossy()
+                            //     );
+                            //     let subs = handle_clone
+                            //         .to_string_lossy()
+                            //         .replace("C:", "")
+                            //         .replace("\\", "/");
+                            //     let mut subshell_guard = subshell.lock().unwrap();
+                            //     *subshell_guard = Some(
+                            //         FfmpegCommand::new()
+                            //             .args([
+                            //                 "-i",
+                            //                 handle_clone.to_str().unwrap(),
+                            //                 "-vf",
+                            //                 &format!("subtitles={}:si=30", subs),
+                            //                 // "-movflags",
+                            //                 // "frag_keyframe+empty_moov+faststart",
+                            //                 // DASH
+                            //                 "-use_template",
+                            //                 "1",
+                            //                 "-use_timeline",
+                            //                 "1",
+                            //                 "-seg_duration",
+                            //                 "6",
+                            //                 "-f",
+                            //                 "dash",
+                            //                 // DASH END
+                            //                 // HLS
+                            //                 // "-f",
+                            //                 // "hls",
+                            //                 // "-hls_base_url",
+                            //                 // "/hls/",
+                            //                 // HLS END
+                            //                 "-y",
+                            //             ])
+                            //             .arg(expected_out)
+                            //             .spawn()
+                            //             .unwrap(),
+                            //     );
+                            //     while !Path::is_file(Path::new(expected_out)) {
+                            //         std::thread::sleep(Duration::from_secs(1));
+                            //     }
+                            //     match infer::get_from_path(handle.clone()) {
+                            //         Ok(res) => match res {
+                            //             Some(type_) => {
+                            //                 event_proxy
+                            //                     .send_event(UserEvent::CastLocal {
+                            //                         media_type: type_,
+                            //                         handle,
+                            //                     })
+                            //                     .unwrap();
+                            //             }
+                            //             None => println!("Unable to get file type"),
+                            //         },
+                            //         Err(err) => {
+                            //             println!("Failed to infer type of file: {err}");
+                            //         }
+                            //     };
+                            //     // subshell_guard.take().unwrap().wait().unwrap();
+                            //     // let mut started = false;
+                            //     // while streamable_gen_t_clone.load(Ordering::SeqCst) {
+                            //     //     if !started {
+                            //     //         started = true;
+                            //     //     }
+                            //     // }
+                            // });
+                            match infer::get_from_path(handle.clone()) {
+                                Ok(res) => match res {
+                                    Some(type_) => {
+                                        event_proxy
+                                            .send_event(UserEvent::CastLocal {
+                                                media_type: type_,
+                                                handle,
+                                            })
+                                            .unwrap();
+                                    }
+                                    None => println!("Unable to get file type"),
+                                },
+                                Err(err) => {
+                                    println!("Failed to infer type of file: {err}");
+                                }
+                            };
                             // self.streamable_gen_t.store(true, Ordering::SeqCst);
                         }
 
@@ -295,10 +295,22 @@ impl ApplicationHandler<UserEvent> for App {
             }
             UserEvent::DeviceAvailable(device_info) => {
                 self.devices.push(device_info.clone());
-                self.eval_script(&format!("window.postMessage('{}');", device_info.name))
-                    .expect("Failed to evaluate script");
+                let response = IpcPostMessage {
+                    kind: IpcPostMessageKind::DeviceDiscovered,
+                    data: Some(json!({
+                        "name": device_info.name,
+                        // "protocol": format!("{:?}", device_info.protocol),
+                        "address": format!("{:?}", device_info.addresses.first().unwrap()),
+                        "port": device_info.port
+                    })),
+                };
+                self.eval_script(&format!(
+                    "window.postMessage({});",
+                    serde_json::to_string(&response).unwrap()
+                ))
+                .expect("Failed to evaluate script");
             }
-            UserEvent::Connect(device_name) => {
+            UserEvent::ConnectToDevice(device_name) => {
                 if let Some(device_info) = self
                     .devices
                     .iter()
@@ -397,12 +409,12 @@ impl ApplicationHandler<UserEvent> for App {
                 match self.active_device.as_ref() {
                     Some(active_device) => {
                         if let Err(dev_err) = active_device.load(LoadRequest::Url {
-                            content_type: String::from("application/dash+xml"),
+                            content_type: "video/*".to_string(),
                             url: format!(
                                 "http://{}:{}/stream/{}",
                                 local_ip_address::local_ip().unwrap().to_string(),
                                 self.web_config.port,
-                                "manifest.mpd"
+                                handle.to_string_lossy().replace(MAIN_SEPARATOR_STR, "<<<")
                             ),
                             resume_position: None,
                             speed: None,

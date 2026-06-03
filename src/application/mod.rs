@@ -7,7 +7,6 @@ use winit::event_loop::EventLoopProxy;
 pub mod app;
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub enum IpcMethod {
     ListFiles,
     DiscoverDevices,
@@ -31,6 +30,17 @@ struct IpcResponse {
     result: Option<serde_json::Value>,
 }
 
+#[derive(Serialize)]
+pub enum IpcPostMessageKind {
+    DeviceDiscovered,
+}
+
+#[derive(Serialize)]
+pub struct IpcPostMessage {
+    kind: IpcPostMessageKind,
+    data: Option<serde_json::Value>,
+}
+
 #[derive(Debug)]
 pub enum DeviceEvent {
     ConnectionStateChanged(DeviceConnectionState),
@@ -49,7 +59,7 @@ pub enum UserEvent {
     DeviceAvailable(DeviceInfo),
     DeviceRemoved(String),
     DeviceChanged(DeviceInfo),
-    Connect(String),
+    ConnectToDevice(String),
     Disconnect,
     FromDevice {
         id: usize,

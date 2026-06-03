@@ -1,3 +1,15 @@
+type IpcPostMessageKind = "DeviceDiscovered";
+type IpcPostMessage = {
+    kind: IpcPostMessageKind;
+    data: Record<string, any>;
+};
+type IpcMethod =
+    | "ListFiles"
+    | "DiscoverDevices"
+    | "ConnectToDevice"
+    | "DisconnectFromDevice"
+    | "RequestCastLocal"
+
 declare global {
     interface Window {
         ipc: {
@@ -11,13 +23,6 @@ declare global {
     }
 }
 
-type IpcMethod =
-    | "listFiles"
-    | "discoverDevices"
-    | "connectToDevice"
-    | "disconnectFromDevice"
-    | "requestCastLocal";
-
 export const ipc = {
     call(method: IpcMethod, params = {}) {
         return new Promise((resolve) => {
@@ -30,6 +35,11 @@ export const ipc = {
                     params,
                 }),
             );
+        });
+    },
+    listen(cb: (ipcMessage: IpcPostMessage) => void) {
+        window.addEventListener("message", ({ data }) => {
+            cb(data);
         });
     },
 };

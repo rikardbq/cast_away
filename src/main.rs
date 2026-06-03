@@ -80,28 +80,14 @@ async fn dash_handler(path: web::Path<String>) -> actix_web::Result<impl Respond
 }
 
 async fn stream_video(path: web::Path<String>) -> impl Responder {
-    let p = path.into_inner();
-    let file_path = get_application_root_dir()
-        .join(Path::new("cache"))
-        .join(Path::new(&p));
-    // .replace("<<", MAIN_SEPARATOR_STR);
+    let file_path = path.into_inner().replace("<<<", MAIN_SEPARATOR_STR);
     println!("Stream handler file_path: {:?}", file_path);
-    if p.ends_with(".mpd") {
-        let file = tokio::fs::File::open(file_path).await.unwrap();
-        let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
-        HttpResponse::Ok()
-            .append_header(("Content-Type", "application/dash+xml"))
-            .append_header(("Cache-Control", "no-cache"))
-            .streaming(stream)
-    } else {
-        let file = tokio::fs::File::open(get_application_root_dir().join(Path::new(&p)))
-            .await
-            .unwrap();
-        let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
-        HttpResponse::Ok()
-            .append_header(("Content-Type", "video/iso.segment"))
-            .streaming(stream)
-    }
+    let file = tokio::fs::File::open(file_path).await.unwrap();
+    let stream = FramedRead::new(file, BytesCodec::new()).map(|r| r.map(|b| b.freeze()));
+    HttpResponse::Ok()
+        .append_header(("Content-Type", "video/*"))
+        .append_header(("Cache-Control", "no-cache"))
+        .streaming(stream)
 }
 
 async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
