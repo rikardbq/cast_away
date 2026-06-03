@@ -356,10 +356,9 @@ impl ApplicationHandler<UserEvent> for App {
                                     if let Err(err) = active_device.load(LoadRequest::Image {
                                         content_type: "image/*".to_string(),
                                         url: format!(
-                                            "http://{}:{}/stream/{}",
+                                            "http://{}:{}/splash",
                                             local_ip_address::local_ip().unwrap().to_string(),
                                             self.web_config.port,
-                                            B64::encode_str("C:\\Users\\rikardbq\\my\\dev\\rust\\cast_away\\assets\\bundles\\mario-movie-poster-CbxToPYv.jpg")
                                         ),
                                         metadata: None,
                                         request_headers: None,

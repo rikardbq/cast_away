@@ -28,6 +28,18 @@ async fn stream_handler(path: web::Path<String>) -> impl Responder {
         .streaming(stream)
 }
 
+async fn splash() -> actix_web::Result<impl Responder> {
+    Ok(NamedFile::open(format!(
+        "{}/{}/splash.gif",
+        get_application_root_dir().to_string_lossy(),
+        "media"
+    ))?
+    .use_etag(false)
+    .use_last_modified(false)
+    .customize()
+    .insert_header(("Cache-Control", "max-age=604800")))
+}
+
 async fn index(_req: HttpRequest) -> actix_web::Result<impl Responder> {
     let path: PathBuf = format!(
         "{}/{}/index.html",
@@ -55,8 +67,16 @@ async fn main() {
         HttpServer::new(move || {
             actix_web::App::new()
                 .route("/", web::get().to(index))
+                .route("/splash", web::get().to(splash))
                 .route("/stream/{file_name}", web::get().to(stream_handler))
-                .service(Files::new("/", format!("./{srv_root}")))
+                .service(Files::new(
+                    "/",
+                    format!(
+                        "{}/{}",
+                        get_application_root_dir().to_string_lossy(),
+                        srv_root
+                    ),
+                ))
         })
         .bind(format!("0.0.0.0:{srv_port}"))
         .unwrap()
