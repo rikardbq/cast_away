@@ -24,6 +24,11 @@ const ListItem = ({ id, name, description: _, focused, ...rest }: any) => {
 
 const testItems = [
     {
+        name: "Paramount+",
+        desc: "Halo",
+        focused: false,
+    },
+    {
         name: "Netflix",
         desc: "description",
         focused: false,
@@ -48,6 +53,11 @@ const testItems = [
         desc: "description apple",
         focused: false,
     },
+    {
+        name: "Viaplay",
+        desc: "aaaaaaaaaa",
+        focused: false,
+    },
 ];
 
 const keyDownHandler =
@@ -60,12 +70,12 @@ const keyDownHandler =
             // if (currFocus === 0) return;
             // else
             const nFocus = currFocus - 1;
-            setFocused(nFocus < 2 ? items.length - 4 : nFocus);
+            setFocused(nFocus < 3 ? items.length - 5 : nFocus);
         } else if (ev.code === "ArrowRight") {
             // if (currFocus === items.length - 1) return;
             // else
             const nFocus = currFocus + 1;
-            setFocused(nFocus > items.length - 3 ? 3 : nFocus);
+            setFocused(nFocus > items.length - 4 ? 4 : nFocus);
         }
         console.log(ev.code);
     };
@@ -83,16 +93,18 @@ export default ({
 }: Props) => {
     const limitRate = useRateLimit();
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
-    const [items, setItems] = useState([...testItems, ...testItems]);
+    const [items, _setItems] = useState([...testItems, ...testItems]);
+    const [previousFocus, setPreviousFocus] = useState(testItems.length);
     const [currentFocus, setCurrentFocus] = useState(testItems.length);
     const setFocused = (idx: number) => {
+        setPreviousFocus(currentFocus);
         setCurrentFocus(idx);
-        setItems(
-            items.map((y, i) => ({
-                ...y,
-                focused: idx === i,
-            })),
-        );
+        // setItems(
+        //     items.map((y, i) => ({
+        //         ...y,
+        //         focused: idx === i,
+        //     })),
+        // );
         document.getElementById(`${idx}`)?.scrollIntoView({
             behavior: "smooth",
         });
@@ -169,45 +181,101 @@ export default ({
                     position: "absolute",
                 }}
             >
-                {items.map((x, idx) => (
-                    <li
-                        key={idx}
-                        style={{
-                            position: "absolute",
-                            backgroundColor: x.focused ? "coral" : "lightblue",
-                            opacity: (() => {
-                                // const pos = Math.floor(items.length / 2);
-                                if (idx === currentFocus) {
-                                    return 1;
-                                }
-                                if (idx === currentFocus - 1) {
-                                    return 0.5;
-                                }
-                                if (idx === currentFocus + 1) {
-                                    return 0.5;
-                                }
-
-                                return 0;
-                            })(),
-                            transform: (() => {
-                                // const pos = Math.floor(items.length / 2);
-                                if (idx === currentFocus) {
-                                    return "translate3d(100px, 200px, 0px)";
-                                }
-                                if (idx === currentFocus - 1) {
-                                    return "translate3d(100px, 100px, 0px)";
-                                }
-                                if (idx === currentFocus + 1) {
-                                    return "translate3d(100px, 300px, 0px)";
-                                }
-
-                                return "translate3d(-100px, -100px, 0px)";
-                            })(),
-                        }}
-                    >
-                        {x.name}
-                    </li>
-                ))}
+                {items.map((x, idx) => {
+                    const getKeyFrameAnim = () => {
+                        if (currentFocus > previousFocus) {
+                            switch (idx) {
+                                case currentFocus - 1:
+                                    return "down_prev_1";
+                                case currentFocus - 2:
+                                    return "down_prev_2";
+                                case currentFocus - 3:
+                                    return "down_prev_3";
+                                case currentFocus + 1:
+                                    return "down_next_1";
+                                case currentFocus + 2:
+                                    return "down_next_2";
+                                case currentFocus + 3:
+                                    return "down_next_3";
+                                default:
+                                    return "";
+                            }
+                        } else if (currentFocus < previousFocus) {
+                            switch (idx) {
+                                case currentFocus - 1:
+                                    return "up_prev_1";
+                                case currentFocus - 2:
+                                    return "up_prev_2";
+                                case currentFocus - 3:
+                                    return "up_prev_3";
+                                case currentFocus + 1:
+                                    return "up_next_1";
+                                case currentFocus + 2:
+                                    return "up_next_2";
+                                case currentFocus + 3:
+                                    return "up_next_3";
+                                default:
+                                    return "";
+                            }
+                        }
+                    };
+                    return (
+                        <li
+                            key={idx}
+                            className={getKeyFrameAnim()}
+                            style={{
+                                width: "max-content",
+                                position: "absolute",
+                                backgroundColor:
+                                    idx === currentFocus
+                                        ? "coral"
+                                        : "lightblue",
+                                transition:
+                                    idx === currentFocus
+                                        ? "opacity 0.250s linear, transform 0.250s cubic-bezier(.14,.91,.41,1.32)"
+                                        : "",
+                                opacity:
+                                    idx === currentFocus
+                                        ? 1
+                                        : idx === currentFocus + 1 ||
+                                            idx === currentFocus - 1
+                                          ? 0.5
+                                          : idx === currentFocus + 2 ||
+                                              idx === currentFocus - 2
+                                            ? 0.15
+                                            : 0,
+                                transformOrigin: "left",
+                                transform: (() => {
+                                    if (idx === currentFocus) {
+                                        return "scale(1.5) translate3d(0px, 0px, 0px)";
+                                    } else {
+                                        if (idx === currentFocus - 1) {
+                                            return "translate3d(0px, -100px, 0px)";
+                                        }
+                                        if (idx === currentFocus - 2) {
+                                            return "translate3d(0px, -200px, 0px)";
+                                        }
+                                        if (idx === currentFocus - 3) {
+                                            return "translate3d(0px, -300px, 0px)";
+                                        }
+                                        if (idx === currentFocus + 1) {
+                                            return "translate3d(0px, 100px, 0px)";
+                                        }
+                                        if (idx === currentFocus + 2) {
+                                            return "translate3d(0px, 200px, 0px)";
+                                        }
+                                        if (idx === currentFocus + 3) {
+                                            return "translate3d(0px, 300px, 0px)";
+                                        }
+                                        return "";
+                                    }
+                                })(),
+                            }}
+                        >
+                            {x.name}
+                        </li>
+                    );
+                })}
             </ul>
         </>
     );

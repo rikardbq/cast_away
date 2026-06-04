@@ -17,6 +17,163 @@
 .tesst { 
   animation: slide-in 5s forwards;
 }
+
+@keyframes down_prev_1 {
+  from {
+    transform: translate3d(0px, 0px, 0px);
+  }
+to {
+    transform: translate3d(0px, -100px, 0px);
+  }
+}
+
+@keyframes down_prev_2 {
+  from {
+    transform: translate3d(0px, -100px, 0px);
+  }
+to {
+    transform: translate3d(0px, -200px, 0px);
+  }
+}
+
+@keyframes down_prev_3 {
+  from {
+    transform: translate3d(0px, -200px, 0px);
+  }
+to {
+    transform: translate3d(0px, -300px, 0px);
+  }
+}
+
+@keyframes up_prev_1 {
+  from {
+    transform: translate3d(0px, -200px, 0px);
+  }
+to {
+    transform: translate3d(0px, -100px, 0px);
+  }
+}
+
+@keyframes up_prev_2 {
+  from {
+    transform: translate3d(0px, -300px, 0px);
+  }
+to {
+    transform: translate3d(0px, -200px, 0px);
+  }
+}
+
+@keyframes up_prev_3 {
+  from {
+    transform: translate3d(0px, -400px, 0px);
+  }
+to {
+    transform: translate3d(0px, -300px, 0px);
+  }
+}
+
+@keyframes down_next_1 {
+  from {
+    transform: translate3d(0px, 200px, 0px);
+  }
+to {
+    transform: translate3d(0px, 100px, 0px);
+  }
+}
+
+@keyframes down_next_2 {
+  from {
+    transform: translate3d(0px, 300px, 0px);
+  }
+to {
+    transform: translate3d(0px, 200px, 0px);
+  }
+}
+
+@keyframes down_next_3 {
+  from {
+    transform: translate3d(0px, 400px, 0px);
+  }
+to {
+    transform: translate3d(0px, 300px, 0px);
+  }
+}
+
+@keyframes up_next_1 {
+  from {
+    transform: translate3d(0px, 0px, 0px);
+  }
+to {
+    transform: translate3d(0px, 100px, 0px);
+  }
+}
+
+@keyframes up_next_2 {
+  from {
+    transform: translate3d(0px, 100px, 0px);
+  }
+to {
+    transform: translate3d(0px, 200px, 0px);
+  }
+}
+
+@keyframes up_next_3 {
+  from {
+    transform: translate3d(0px, 200px, 0px);
+  }
+to {
+    transform: translate3d(0px, 300px, 0px);
+  }
+}
+
+.down_prev_1 { 
+  animation: down_prev_1 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.down_prev_2 { 
+  animation: down_prev_2 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.down_prev_3 { 
+  animation: down_prev_3 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_prev_1 { 
+  animation: up_prev_1 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_prev_2 { 
+  animation: up_prev_2 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_prev_3 { 
+  animation: up_prev_3 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_next_1 { 
+  animation: up_next_1 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_next_2 { 
+  animation: up_next_2 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.up_next_3 { 
+  animation: up_next_3 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.down_next_1 { 
+  animation: down_next_1 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.down_next_2 { 
+  animation: down_next_2 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
+.down_next_3 { 
+  animation: down_next_3 0.200s cubic-bezier(.14,.91,.41,1.32);
+}
+
 /* #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -40,8 +197,7 @@
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
-  }
-  to {
+  }to {
     transform: rotate(360deg);
   }
 }
