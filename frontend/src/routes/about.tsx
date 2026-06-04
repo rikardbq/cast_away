@@ -9,7 +9,7 @@ const ListItem = ({ id, name, description: _, focused, ...rest }: any) => {
     return (
         <li id={id} {...rest}>
             <div
-            className={`transition-all duration-150 ease-in-out min-w-40 min-h-40 ${focused ? "scale-125 border-primary rounded-xl shadow-[0px_0px_20px_5px_rgba(0,0,0,0.25)] shadow-primary" : "shadow-md rounded-lg border-transparent"}`}
+                className={`transition-all duration-150 ease-in-out min-w-40 min-h-40 ${focused ? "scale-125 border-primary rounded-xl shadow-[0px_0px_20px_5px_rgba(0,0,0,0.25)] shadow-primary" : "shadow-md rounded-lg border-transparent"}`}
                 // style={{
                 //     width: "500px",
                 //     height: "500px",
@@ -26,7 +26,7 @@ const testItems = [
     {
         name: "Netflix",
         desc: "description",
-        focused: true,
+        focused: false,
     },
     {
         name: "N chill",
@@ -57,11 +57,15 @@ const keyDownHandler =
         console.log(currFocus);
 
         if (ev.code === "ArrowLeft") {
-            if (currFocus === 0) return;
-            else setFocused(currFocus - 1);
+            // if (currFocus === 0) return;
+            // else
+            const nFocus = currFocus - 1;
+            setFocused(nFocus < 2 ? items.length - 4 : nFocus);
         } else if (ev.code === "ArrowRight") {
-            if (currFocus === items.length - 1) return;
-            else setFocused(currFocus + 1);
+            // if (currFocus === items.length - 1) return;
+            // else
+            const nFocus = currFocus + 1;
+            setFocused(nFocus > items.length - 3 ? 3 : nFocus);
         }
         console.log(ev.code);
     };
@@ -70,11 +74,17 @@ type Props = {
     gamepadUtils: GamepadUtils;
 };
 
-export default ({ gamepadUtils: { gamepads, isButtonPressed, stick: { moveX, deadzone } } }: Props) => {
+export default ({
+    gamepadUtils: {
+        gamepads,
+        isButtonPressed,
+        stick: { moveX, deadzone },
+    },
+}: Props) => {
     const limitRate = useRateLimit();
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
-    const [items, setItems] = useState(testItems);
-    const [currentFocus, setCurrentFocus] = useState(0);
+    const [items, setItems] = useState([...testItems, ...testItems]);
+    const [currentFocus, setCurrentFocus] = useState(testItems.length);
     const setFocused = (idx: number) => {
         setCurrentFocus(idx);
         setItems(
@@ -102,14 +112,28 @@ export default ({ gamepadUtils: { gamepads, isButtonPressed, stick: { moveX, dea
     }, [currentFocus]);
 
     if (gamepad) {
-        if (isButtonPressed(gamepad, "XBOX.DPAD_LEFT") || moveX(gamepad, "LEFT_STICK") < 0 - deadzone) {
-            if (currentFocus !== 0) {
-                limitRate(() => setFocused(currentFocus - 1), 100);
-            }
-        } else if (isButtonPressed(gamepad, "XBOX.DPAD_RIGHT") || moveX(gamepad, "LEFT_STICK") > 0 + deadzone) {
-            if (currentFocus !== items.length - 1) {
-                limitRate(() => setFocused(currentFocus + 1), 100);
-            }
+        if (
+            isButtonPressed(gamepad, "XBOX.DPAD_LEFT") ||
+            moveX(gamepad, "LEFT_STICK") < 0 - deadzone
+        ) {
+            const nFocus = currentFocus - 1;
+            limitRate(
+                () => setFocused(nFocus < 0 ? items.length - 1 : nFocus),
+                100,
+            );
+            // if (currentFocus !== 0) {
+            // }
+        } else if (
+            isButtonPressed(gamepad, "XBOX.DPAD_RIGHT") ||
+            moveX(gamepad, "LEFT_STICK") > 0 + deadzone
+        ) {
+            const nFocus = currentFocus + 1;
+            limitRate(
+                () => setFocused(nFocus > items.length - 1 ? 0 : nFocus),
+                100,
+            );
+            // if (currentFocus !== items.length - 1) {
+            // }
         }
     }
 
@@ -133,13 +157,58 @@ export default ({ gamepadUtils: { gamepads, isButtonPressed, stick: { moveX, dea
                             id={idx}
                             key={`${x.name}:${idx}`}
                             name={x.name}
-                            focused={x.focused}
+                            focused={idx === currentFocus}
                         />
                     ))}
                 </ul>
             </div>
             <h1>TEST</h1>
             <Link to="/">Home</Link>
+            <ul
+                style={{
+                    position: "absolute",
+                }}
+            >
+                {items.map((x, idx) => (
+                    <li
+                        key={idx}
+                        style={{
+                            position: "absolute",
+                            backgroundColor: x.focused ? "coral" : "lightblue",
+                            opacity: (() => {
+                                // const pos = Math.floor(items.length / 2);
+                                if (idx === currentFocus) {
+                                    return 1;
+                                }
+                                if (idx === currentFocus - 1) {
+                                    return 0.5;
+                                }
+                                if (idx === currentFocus + 1) {
+                                    return 0.5;
+                                }
+
+                                return 0;
+                            })(),
+                            transform: (() => {
+                                // const pos = Math.floor(items.length / 2);
+                                if (idx === currentFocus) {
+                                    return "translate3d(100px, 200px, 0px)";
+                                }
+                                if (idx === currentFocus - 1) {
+                                    return "translate3d(100px, 100px, 0px)";
+                                }
+                                if (idx === currentFocus + 1) {
+                                    return "translate3d(100px, 300px, 0px)";
+                                }
+
+                                return "translate3d(-100px, -100px, 0px)";
+                            })(),
+                        }}
+                    >
+                        {x.name}
+                    </li>
+                ))}
+            </ul>
         </>
     );
 };
