@@ -63,19 +63,14 @@ const testItems = [
 const keyDownHandler =
     (currFocus: number, setFocused: Function, items: any[]) => (ev: any) => {
         ev.preventDefault();
-
-        console.log(currFocus);
-
-        if (ev.code === "ArrowLeft") {
-            // if (currFocus === 0) return;
-            // else
-            const nFocus = currFocus - 1;
-            setFocused(nFocus < 3 ? items.length - 5 : nFocus);
-        } else if (ev.code === "ArrowRight") {
-            // if (currFocus === items.length - 1) return;
-            // else
-            const nFocus = currFocus + 1;
-            setFocused(nFocus > items.length - 4 ? 4 : nFocus);
+        if (ev.code === "ArrowLeft" || ev.code === "ArrowUp") {
+            const nextFocus = currFocus - 1;
+            const willoop = nextFocus < 3;
+            setFocused(willoop ? items.length - 5 : nextFocus);
+        } else if (ev.code === "ArrowRight" || ev.code === "ArrowDown") {
+            const nextFocus = currFocus + 1;
+            const willoop = nextFocus > items.length - 4;
+            setFocused(willoop ? 4 : nextFocus);
         }
         console.log(ev.code);
     };
@@ -96,19 +91,34 @@ export default ({
     const [items, _setItems] = useState([...testItems, ...testItems]);
     const [previousFocus, setPreviousFocus] = useState(testItems.length);
     const [currentFocus, setCurrentFocus] = useState(testItems.length);
-    const setFocused = (idx: number) => {
-        setPreviousFocus(currentFocus);
-        setCurrentFocus(idx);
-        // setItems(
-        //     items.map((y, i) => ({
-        //         ...y,
-        //         focused: idx === i,
-        //     })),
-        // );
-        document.getElementById(`${idx}`)?.scrollIntoView({
+    const setFocused = (next_focus: number) => {
+        setPreviousFocus(
+            next_focus - currentFocus > 1
+                ? next_focus + 1
+                : next_focus - currentFocus < -1
+                  ? next_focus - 1
+                  : currentFocus,
+        );
+        console.log("looped left ", next_focus - currentFocus > 1);
+
+        setCurrentFocus(next_focus);
+        document.getElementById(`${next_focus}`)?.scrollIntoView({
             behavior: "smooth",
         });
     };
+    // const setFocused = (idx: number) => {
+    //     setPreviousFocus(currentFocus);
+    //     setCurrentFocus(idx);
+    //     // setItems(
+    //     //     items.map((y, i) => ({
+    //     //         ...y,
+    //     //         focused: idx === i,
+    //     //     })),
+    //     // );
+    //     document.getElementById(`${idx}`)?.scrollIntoView({
+    //         behavior: "smooth",
+    //     });
+    // };
     const navHandler = useRef(keyDownHandler(currentFocus, setFocused, items));
 
     useEffect(() => {
@@ -249,7 +259,11 @@ export default ({
                                     if (idx === currentFocus) {
                                         return "scale(1.5) translate3d(0px, 0px, 0px)";
                                     } else {
-                                        if (idx === currentFocus - 1) {
+                                        if (
+                                            idx === currentFocus - 1 ||
+                                            (currentFocus === 3 &&
+                                                idx === currentFocus + (testItems.length - 1))
+                                        ) {
                                             return "translate3d(0px, -100px, 0px)";
                                         }
                                         if (idx === currentFocus - 2) {
@@ -258,7 +272,9 @@ export default ({
                                         if (idx === currentFocus - 3) {
                                             return "translate3d(0px, -300px, 0px)";
                                         }
-                                        if (idx === currentFocus + 1) {
+                                        if (idx === currentFocus + 1 ||
+                                            (currentFocus === items.length - 4 &&
+                                                idx === currentFocus - (testItems.length - 1))) {
                                             return "translate3d(0px, 100px, 0px)";
                                         }
                                         if (idx === currentFocus + 2) {
