@@ -83,7 +83,7 @@ export default ({
     gamepadUtils: {
         gamepads,
         isButtonPressed,
-        stick: { moveX, deadzone },
+        stick: { moveX: _moveX, moveY, deadzone },
     },
 }: Props) => {
     const limitRate = useRateLimit();
@@ -133,31 +133,28 @@ export default ({
         window.addEventListener("keydown", navHandler.current);
     }, [currentFocus]);
 
-    if (gamepad) {
-        if (
-            isButtonPressed(gamepad, "XBOX.DPAD_LEFT") ||
-            moveX(gamepad, "LEFT_STICK") < 0 - deadzone
-        ) {
-            const nFocus = currentFocus - 1;
-            limitRate(
-                () => setFocused(nFocus < 0 ? items.length - 1 : nFocus),
-                100,
-            );
-            // if (currentFocus !== 0) {
-            // }
-        } else if (
-            isButtonPressed(gamepad, "XBOX.DPAD_RIGHT") ||
-            moveX(gamepad, "LEFT_STICK") > 0 + deadzone
-        ) {
-            const nFocus = currentFocus + 1;
-            limitRate(
-                () => setFocused(nFocus > items.length - 1 ? 0 : nFocus),
-                100,
-            );
-            // if (currentFocus !== items.length - 1) {
-            // }
+    useEffect(() => {
+        if (gamepad) {
+            if (
+                isButtonPressed(gamepad, "XBOX.DPAD_UP") ||
+                moveY(gamepad, "LEFT_STICK") < 0 - deadzone
+            ) {
+                const nextFocus = currentFocus - 1;
+                const willoop = nextFocus < 3;
+                limitRate(
+                    () => setFocused(willoop ? items.length - 5 : nextFocus),
+                    250,
+                );
+            } else if (
+                isButtonPressed(gamepad, "XBOX.DPAD_DOWN") ||
+                moveY(gamepad, "LEFT_STICK") > 0 + deadzone
+            ) {
+                const nextFocus = currentFocus + 1;
+                const willoop = nextFocus > items.length - 4;
+                limitRate(() => setFocused(willoop ? 4 : nextFocus), 250);
+            }
         }
-    }
+    });
 
     return (
         <>
@@ -242,7 +239,7 @@ export default ({
                                         : "lightblue",
                                 transition:
                                     idx === currentFocus
-                                        ? "opacity 0.250s linear, transform 0.250s cubic-bezier(.14,.91,.41,1.32)"
+                                        ? "opacity 0.250s linear, transform 0.200s cubic-bezier(.14,.91,.41,1.32)"
                                         : "",
                                 opacity:
                                     idx === currentFocus
@@ -257,14 +254,16 @@ export default ({
                                 transformOrigin: "left",
                                 transform: (() => {
                                     if (idx === currentFocus) {
-                                        return "scale(1.5) translate3d(0px, 0px, 0px)";
+                                        return "scale(2.25) translate3d(0px, 0px, 0px)";
                                     } else {
                                         if (
                                             idx === currentFocus - 1 ||
                                             (currentFocus === 3 &&
-                                                idx === currentFocus + (testItems.length - 1))
+                                                idx ===
+                                                    currentFocus +
+                                                        (testItems.length - 1))
                                         ) {
-                                            return "translate3d(0px, -100px, 0px)";
+                                            return "scale(1.5) translate3d(0px, -100px, 0px)";
                                         }
                                         if (idx === currentFocus - 2) {
                                             return "translate3d(0px, -200px, 0px)";
@@ -272,10 +271,15 @@ export default ({
                                         if (idx === currentFocus - 3) {
                                             return "translate3d(0px, -300px, 0px)";
                                         }
-                                        if (idx === currentFocus + 1 ||
-                                            (currentFocus === items.length - 4 &&
-                                                idx === currentFocus - (testItems.length - 1))) {
-                                            return "translate3d(0px, 100px, 0px)";
+                                        if (
+                                            idx === currentFocus + 1 ||
+                                            (currentFocus ===
+                                                items.length - 4 &&
+                                                idx ===
+                                                    currentFocus -
+                                                        (testItems.length - 1))
+                                        ) {
+                                            return "scale(1.5) translate3d(0px, 100px, 0px)";
                                         }
                                         if (idx === currentFocus + 2) {
                                             return "translate3d(0px, 200px, 0px)";
