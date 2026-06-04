@@ -28,9 +28,9 @@ async fn stream_handler(path: web::Path<String>) -> impl Responder {
         .streaming(stream)
 }
 
-async fn splash() -> actix_web::Result<impl Responder> {
+async fn idle() -> actix_web::Result<impl Responder> {
     Ok(NamedFile::open(format!(
-        "{}/{}/splash.gif",
+        "{}/{}/idle.webp",
         get_application_root_dir().to_string_lossy(),
         "media"
     ))?
@@ -67,7 +67,7 @@ async fn main() {
         HttpServer::new(move || {
             actix_web::App::new()
                 .route("/", web::get().to(index))
-                .route("/splash", web::get().to(splash))
+                .route("/idle", web::get().to(idle))
                 .route("/stream/{file_name}", web::get().to(stream_handler))
                 .service(Files::new(
                     "/",

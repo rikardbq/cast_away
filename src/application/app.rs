@@ -352,11 +352,11 @@ impl ApplicationHandler<UserEvent> for App {
                                 // ))
                                 // .expect("Failed to evaluate script");
                                 if let Some(active_device) = &self.active_device {
-                                    // splash
+                                    // idle screen
                                     if let Err(err) = active_device.load(LoadRequest::Image {
                                         content_type: "image/*".to_string(),
                                         url: format!(
-                                            "http://{}:{}/splash",
+                                            "http://{}:{}/idle",
                                             local_ip_address::local_ip().unwrap().to_string(),
                                             self.web_config.port,
                                         ),
@@ -365,7 +365,7 @@ impl ApplicationHandler<UserEvent> for App {
                                     }) {
                                         println!("{err:?}");
                                     };
-                                    // splash end
+                                    // idle screen end
                                     if active_device
                                         .supports_feature(DeviceFeature::MediaEventSubscription)
                                     {
