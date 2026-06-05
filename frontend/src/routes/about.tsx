@@ -79,6 +79,52 @@ type Props = {
     gamepadUtils: GamepadUtils;
 };
 
+const getKeyFrameAnim = (
+    idx: number,
+    current_focus: number,
+    previous_focus: number,
+) => {
+    for (let i = 1; i <= 3; i++) {
+        let pn = undefined;
+        if (idx === current_focus - i) pn = "prev";
+        if (idx === current_focus + i) pn = "next";
+
+        if (pn) {
+            if (current_focus > previous_focus) return `${pn}-${i}-down`;
+            if (current_focus < previous_focus) return `${pn}-${i}-up`;
+        }
+    }
+
+    return "";
+};
+
+const getItemStyles = (
+    idx: number,
+    current_focus: number,
+    items_splice: any[],
+    items: any[],
+) => {
+    if (idx === current_focus) {
+        return "selected";
+    } else {
+        if (current_focus === 3 && idx === current_focus + (items.length - 1)) {
+            return "translate-up-100px non-adjacent";
+        }
+        if (
+            current_focus === items_splice.length - 4 &&
+            idx === current_focus - (items.length - 1)
+        ) {
+            return "translate-down-100px non-adjacent";
+        }
+        for (let i = 1; i <= 3; i++) {
+            if (idx === current_focus - i) return `prev-${i}`;
+            if (idx === current_focus + i) return `next-${i}`;
+        }
+    }
+
+    return "non-adjacent";
+};
+
 export default ({
     gamepadUtils: {
         gamepads,
@@ -189,47 +235,10 @@ export default ({
                 }}
             >
                 {items.map((x, idx) => {
-                    const getKeyFrameAnim = () => {
-                        if (currentFocus > previousFocus) {
-                            switch (idx) {
-                                case currentFocus - 1:
-                                    return "down_prev_1";
-                                case currentFocus - 2:
-                                    return "down_prev_2";
-                                case currentFocus - 3:
-                                    return "down_prev_3";
-                                case currentFocus + 1:
-                                    return "down_next_1";
-                                case currentFocus + 2:
-                                    return "down_next_2";
-                                case currentFocus + 3:
-                                    return "down_next_3";
-                                default:
-                                    return "";
-                            }
-                        } else if (currentFocus < previousFocus) {
-                            switch (idx) {
-                                case currentFocus - 1:
-                                    return "up_prev_1";
-                                case currentFocus - 2:
-                                    return "up_prev_2";
-                                case currentFocus - 3:
-                                    return "up_prev_3";
-                                case currentFocus + 1:
-                                    return "up_next_1";
-                                case currentFocus + 2:
-                                    return "up_next_2";
-                                case currentFocus + 3:
-                                    return "up_next_3";
-                                default:
-                                    return "";
-                            }
-                        }
-                    };
                     return (
                         <li
                             key={idx}
-                            className={getKeyFrameAnim()}
+                            className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)} ${getItemStyles(idx, currentFocus, items, testItems)}`}
                             style={{
                                 width: "max-content",
                                 position: "absolute",
@@ -237,59 +246,6 @@ export default ({
                                     idx === currentFocus
                                         ? "coral"
                                         : "lightblue",
-                                transition:
-                                    idx === currentFocus
-                                        ? "opacity 0.250s linear, transform 0.200s cubic-bezier(.14,.91,.41,1.32)"
-                                        : "",
-                                opacity:
-                                    idx === currentFocus
-                                        ? 1
-                                        : idx === currentFocus + 1 ||
-                                            idx === currentFocus - 1
-                                          ? 0.5
-                                          : idx === currentFocus + 2 ||
-                                              idx === currentFocus - 2
-                                            ? 0.15
-                                            : 0,
-                                transformOrigin: "left",
-                                transform: (() => {
-                                    if (idx === currentFocus) {
-                                        return "translate3d(0px, 0px, 0px)";
-                                    } else {
-                                        if (
-                                            idx === currentFocus - 1 ||
-                                            (currentFocus === 3 &&
-                                                idx ===
-                                                    currentFocus +
-                                                        (testItems.length - 1))
-                                        ) {
-                                            return "translate3d(0px, -100px, 0px)";
-                                        }
-                                        if (idx === currentFocus - 2) {
-                                            return "translate3d(0px, -200px, 0px)";
-                                        }
-                                        if (idx === currentFocus - 3) {
-                                            return "translate3d(0px, -300px, 0px)";
-                                        }
-                                        if (
-                                            idx === currentFocus + 1 ||
-                                            (currentFocus ===
-                                                items.length - 4 &&
-                                                idx ===
-                                                    currentFocus -
-                                                        (testItems.length - 1))
-                                        ) {
-                                            return "translate3d(0px, 100px, 0px)";
-                                        }
-                                        if (idx === currentFocus + 2) {
-                                            return "translate3d(0px, 200px, 0px)";
-                                        }
-                                        if (idx === currentFocus + 3) {
-                                            return "translate3d(0px, 300px, 0px)";
-                                        }
-                                        return "";
-                                    }
-                                })(),
                             }}
                         >
                             {x.name}
