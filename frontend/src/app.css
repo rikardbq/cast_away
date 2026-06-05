@@ -1,3 +1,12 @@
+@font-face {
+    font-family: "FetteUnzFraktur";
+    src:
+        local("FetteUnzFraktur"),
+        url(./fonts/fette-unz-fraktur.ttf) format("truetype");
+    /* other formats include: 'woff2', 'truetype, 'opentype',
+                            'embedded-opentype', and 'svg' */
+}
+
 :root {
     --animation-bounce: cubic-bezier(0.14, 0.91, 0.41, 1.32);
 }
@@ -76,9 +85,9 @@
 
 .selected {
     transition:
-        scale 0.2s var(--animation-bounce),
+        scale 2s var(--animation-bounce),
         opacity 0.25s ease-out,
-        transform 0.2s var(--animation-bounce);
+        transform 2s var(--animation-bounce);
     transform: scale(1.75) translate3d(0px, 0px, 0px);
     transform-origin: left;
     opacity: 1;
@@ -106,11 +115,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 0px;
-        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-1-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -128px;
-        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-1-animation 2s var(--animation-bounce) forwards;
     }
 }
 
@@ -119,11 +128,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: -64px;
-        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-2-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -192px;
-        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-2-animation 2s var(--animation-bounce) forwards;
     }
 }
 
@@ -132,11 +141,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: -128px;
-        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-3-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -256px;
-        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
+        animation: left-3-animation 2s var(--animation-bounce) forwards;
     }
 }
 
@@ -145,11 +154,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 128px;
-        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-1-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 0px;
-        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-1-animation 2s var(--animation-bounce) forwards;
     }
 }
 
@@ -158,11 +167,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 192px;
-        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-2-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 64px;
-        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-2-animation 2s var(--animation-bounce) forwards;
     }
 }
 
@@ -171,11 +180,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 256px;
-        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-3-animation 2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 128px;
-        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
+        animation: right-3-animation 2s var(--animation-bounce) forwards;
     }
 }
 

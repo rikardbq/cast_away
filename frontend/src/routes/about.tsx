@@ -116,7 +116,10 @@ const willoopStyles = (
 ) => {
     const list_threshold = list.length > 3 ? 3 : list.length;
     let classes = "";
-    if (current_focus === list_threshold && idx === padded_list.length - (list_threshold + 1)) {
+    if (
+        current_focus === list_threshold &&
+        idx === padded_list.length - (list_threshold + 1)
+    ) {
         classes = "loop l";
     }
     if (
@@ -269,6 +272,7 @@ export default ({
                     className="x-items"
                     style={{
                         position: "absolute",
+                        fontFamily: "FetteUnzFraktur",
                     }}
                 >
                     {items.map((x, idx) => {
@@ -289,7 +293,7 @@ export default ({
                                             : "lightblue",
                                 }}
                             >
-                                {x.name}
+                                {x.name.toLowerCase()}
                             </li>
                         );
                     })}
