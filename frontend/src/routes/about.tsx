@@ -254,7 +254,7 @@ export default ({
                                 transformOrigin: "left",
                                 transform: (() => {
                                     if (idx === currentFocus) {
-                                        return "scale(2.25) translate3d(0px, 0px, 0px)";
+                                        return "translate3d(0px, 0px, 0px)";
                                     } else {
                                         if (
                                             idx === currentFocus - 1 ||
@@ -263,7 +263,7 @@ export default ({
                                                     currentFocus +
                                                         (testItems.length - 1))
                                         ) {
-                                            return "scale(1.5) translate3d(0px, -100px, 0px)";
+                                            return "translate3d(0px, -100px, 0px)";
                                         }
                                         if (idx === currentFocus - 2) {
                                             return "translate3d(0px, -200px, 0px)";
@@ -279,7 +279,7 @@ export default ({
                                                     currentFocus -
                                                         (testItems.length - 1))
                                         ) {
-                                            return "scale(1.5) translate3d(0px, 100px, 0px)";
+                                            return "translate3d(0px, 100px, 0px)";
                                         }
                                         if (idx === currentFocus + 2) {
                                             return "translate3d(0px, 200px, 0px)";

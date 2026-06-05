@@ -20,19 +20,19 @@
 
 @keyframes down_prev_1 {
   from {
-    transform: scale(2.25) translate3d(0px, 0px, 0px);
+    transform: translate3d(0px, 0px, 0px);
   }
 to {
-    transform: scale(1.5) translate3d(0px, -100px, 0px);
+    transform: translate3d(0px, -100px, 0px);
   }
 }
 
 @keyframes down_prev_2 {
   from {
-    transform: scale(1.5) translate3d(0px, -100px, 0px);
+    transform: translate3d(0px, -100px, 0px);
   }
 to {
-    transform: scale(1) translate3d(0px, -200px, 0px);
+    transform: translate3d(0px, -200px, 0px);
   }
 }
 
@@ -47,10 +47,10 @@ to {
 
 @keyframes up_prev_1 {
   from {
-    transform: scale(1) translate3d(0px, -200px, 0px);
+    transform: translate3d(0px, -200px, 0px);
   }
 to {
-    transform: scale(1.5) translate3d(0px, -100px, 0px);
+    transform: translate3d(0px, -100px, 0px);
   }
 }
 
@@ -74,10 +74,10 @@ to {
 
 @keyframes down_next_1 {
   from {
-    transform: scale(1) translate3d(0px, 200px, 0px);
+    transform: translate3d(0px, 200px, 0px);
   }
 to {
-    transform: scale(1.5) translate3d(0px, 100px, 0px);
+    transform: translate3d(0px, 100px, 0px);
   }
 }
 
@@ -101,19 +101,19 @@ to {
 
 @keyframes up_next_1 {
   from {
-    transform: scale(2.25) translate3d(0px, 0px, 0px);
+    transform: translate3d(0px, 0px, 0px);
   }
 to {
-    transform: scale(1.5) translate3d(0px, 100px, 0px);
+    transform: translate3d(0px, 100px, 0px);
   }
 }
 
 @keyframes up_next_2 {
   from {
-    transform: scale(1.5) translate3d(0px, 100px, 0px);
+    transform: translate3d(0px, 100px, 0px);
   }
 to {
-    transform: scale(1) translate3d(0px, 200px, 0px);
+    transform: translate3d(0px, 200px, 0px);
   }
 }
 
