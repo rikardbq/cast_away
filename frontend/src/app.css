@@ -2,6 +2,12 @@
     --animation-bounce: cubic-bezier(0.14, 0.91, 0.41, 1.32);
 }
 
+@property --translate-y {
+    syntax: "<length> | <percentage>";
+    inherits: false;
+    initial-value: 0px;
+}
+
 #root {
     max-width: 1280px;
     margin: 0 auto;
@@ -9,160 +15,63 @@
     text-align: center;
 }
 
-@keyframes prev-1-down-animation {
-    from {
-        transform: translate3d(0px, 0px, 0px);
-    }
+@keyframes left-1-animation {
     to {
-        transform: translate3d(0px, -100px, 0px);
+        --translate-y: -64px;
     }
 }
-
-@keyframes prev-2-down-animation {
-    from {
-        transform: translate3d(0px, -100px, 0px);
-    }
+@keyframes left-2-animation {
     to {
-        transform: translate3d(0px, -200px, 0px);
+        --translate-y: -128px;
     }
 }
-
-@keyframes prev-3-down-animation {
-    from {
-        transform: translate3d(0px, -200px, 0px);
-    }
+@keyframes left-3-animation {
     to {
-        transform: translate3d(0px, -300px, 0px);
+        --translate-y: -192px;
     }
 }
-
-@keyframes prev-1-up-animation {
-    from {
-        transform: translate3d(0px, -200px, 0px);
-    }
+@keyframes right-1-animation {
     to {
-        transform: translate3d(0px, -100px, 0px);
+        --translate-y: 64px;
     }
 }
-
-@keyframes prev-2-up-animation {
-    from {
-        transform: translate3d(0px, -300px, 0px);
-    }
+@keyframes right-2-animation {
     to {
-        transform: translate3d(0px, -200px, 0px);
+        --translate-y: 128px;
     }
 }
-
-@keyframes prev-3-up-animation {
-    from {
-        transform: translate3d(0px, -400px, 0px);
-    }
+@keyframes right-3-animation {
     to {
-        transform: translate3d(0px, -300px, 0px);
+        --translate-y: 192px;
     }
 }
 
-@keyframes next-1-up-animation {
-    from {
-        transform: translate3d(0px, 0px, 0px);
+/* fix this */
+.x-items {
+    > li {
+        opacity: 0;
     }
-    to {
-        transform: translate3d(0px, 100px, 0px);
+    > li.selected {
+        opacity: 1;
     }
-}
-
-@keyframes next-2-up-animation {
-    from {
-        transform: translate3d(0px, 100px, 0px);
+    > li.left-1 {
+        opacity: 0.5;
     }
-    to {
-        transform: translate3d(0px, 200px, 0px);
+    > li.left-2 {
+        opacity: 0.2;
     }
-}
-
-@keyframes next-3-up-animation {
-    from {
-        transform: translate3d(0px, 200px, 0px);
+    > li.left-3 {
+        opacity: 0.1;
     }
-    to {
-        transform: translate3d(0px, 300px, 0px);
+    > li.right-1 {
+        opacity: 0.5;
     }
-}
-
-@keyframes next-1-down-animation {
-    from {
-        transform: translate3d(0px, 200px, 0px);
+    > li.right-2 {
+        opacity: 0.2;
     }
-    to {
-        transform: translate3d(0px, 100px, 0px);
+    > li.right-3 {
+        opacity: 0.1;
     }
-}
-
-@keyframes next-2-down-animation {
-    from {
-        transform: translate3d(0px, 300px, 0px);
-    }
-    to {
-        transform: translate3d(0px, 200px, 0px);
-    }
-}
-
-@keyframes next-3-down-animation {
-    from {
-        transform: translate3d(0px, 400px, 0px);
-    }
-    to {
-        transform: translate3d(0px, 300px, 0px);
-    }
-}
-
-.next-1-down {
-    animation: next-1-down-animation 0.2s var(--animation-bounce);
-}
-
-.next-2-down {
-    animation: next-2-down-animation 0.2s var(--animation-bounce);
-}
-
-.next-3-down {
-    animation: next-3-down-animation 0.2s var(--animation-bounce);
-}
-
-.prev-1-down {
-    animation: prev-1-down-animation 0.2s var(--animation-bounce);
-}
-
-.prev-2-down {
-    animation: prev-2-down-animation 0.2s var(--animation-bounce);
-}
-
-.prev-3-down {
-    animation: prev-3-down-animation 0.2s var(--animation-bounce);
-}
-
-.next-1-up {
-    animation: next-1-up-animation 0.2s var(--animation-bounce);
-}
-
-.next-2-up {
-    animation: next-2-up-animation 0.2s var(--animation-bounce);
-}
-
-.next-3-up {
-    animation: next-3-up-animation 0.2s var(--animation-bounce);
-}
-
-.prev-1-up {
-    animation: prev-1-up-animation 0.2s var(--animation-bounce);
-}
-
-.prev-2-up {
-    animation: prev-2-up-animation 0.2s var(--animation-bounce);
-}
-
-.prev-3-up {
-    animation: prev-3-up-animation 0.2s var(--animation-bounce);
 }
 
 .selected {
@@ -173,48 +82,101 @@
     transform: scale(1.75) translate3d(0px, 0px, 0px);
     transform-origin: left;
     opacity: 1;
+    /* &:has(+ .left-1) {
+        opacity: 0.5;
+        color: orange;
+    }
+    + .right-1 {
+        opacity: 0.5;
+        color: "green";
+    } */
 }
 
-.non-adjacent {
-    opacity: 0;
+.loop {
+    &.r {
+        transform: translate3d(0px, 64px, 0px);
+    }
+    &.l {
+        transform: translate3d(0px, -64px, 0px);
+    }
 }
 
-.translate-up-100px {
-    transform: translate3d(0px, -100px, 0px);
+.left-1 {
+    --translate-y: -64px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: 0px;
+        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: -128px;
+        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
-.translate-down-100px {
-    transform: translate3d(0px, 100px, 0px);
+.left-2 {
+    --translate-y: -128px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: -64px;
+        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: -192px;
+        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
-.prev-1 {
-    opacity: 0.5;
-    transform: translate3d(0px, -100px, 0px);
+.left-3 {
+    --translate-y: -192px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: -128px;
+        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: -256px;
+        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
-.prev-2 {
-    opacity: 0.2;
-    transform: translate3d(0px, -200px, 0px);    
+.right-1 {
+    --translate-y: 64px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: 128px;
+        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: 0px;
+        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
-.prev-3 {
-    opacity: 0.1;
-    transform: translate3d(0px, -300px, 0px);
+.right-2 {
+    --translate-y: 128px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: 192px;
+        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: 64px;
+        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
-.next-1 {
-    opacity: 0.5;
-    transform: translate3d(0px, 100px, 0px);
-}
-
-.next-2 {
-    opacity: 0.2;
-    transform: translate3d(0px, 200px, 0px);    
-}
-
-.next-3 {
-    opacity: 0.1;
-    transform: translate3d(0px, 300px, 0px);
+.right-3 {
+    --translate-y: 192px;
+    transform: translate3d(0px, var(--translate-y), 0px);
+    &.r {
+        --translate-y: 256px;
+        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: 128px;
+        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
+    }
 }
 
 /* #root {

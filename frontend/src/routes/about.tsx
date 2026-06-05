@@ -86,43 +86,35 @@ const getKeyFrameAnim = (
 ) => {
     for (let i = 1; i <= 3; i++) {
         let pn = undefined;
-        if (idx === current_focus - i) pn = "prev";
-        if (idx === current_focus + i) pn = "next";
-
+        if (idx === current_focus - i) pn = `left-${i}`;
+        if (idx === current_focus + i) pn = `right-${i}`;
         if (pn) {
-            if (current_focus > previous_focus) return `${pn}-${i}-down`;
-            if (current_focus < previous_focus) return `${pn}-${i}-up`;
+            if (current_focus > previous_focus) return `${pn} r`;
+            if (current_focus < previous_focus) return `${pn} l`;
+            return pn;
         }
     }
 
     return "";
 };
 
-const getItemStyles = (
+const willoopStyles = (
     idx: number,
     current_focus: number,
     items_splice: any[],
     items: any[],
 ) => {
-    if (idx === current_focus) {
-        return "selected";
-    } else {
-        if (current_focus === 3 && idx === current_focus + (items.length - 1)) {
-            return "translate-up-100px non-adjacent";
-        }
-        if (
-            current_focus === items_splice.length - 4 &&
-            idx === current_focus - (items.length - 1)
-        ) {
-            return "translate-down-100px non-adjacent";
-        }
-        for (let i = 1; i <= 3; i++) {
-            if (idx === current_focus - i) return `prev-${i}`;
-            if (idx === current_focus + i) return `next-${i}`;
-        }
+    if (current_focus === 3 && idx === current_focus + (items.length - 1)) {
+        return "loop l";
+    }
+    if (
+        current_focus === items_splice.length - 4 &&
+        idx === current_focus - (items.length - 1)
+    ) {
+        return "loop r";
     }
 
-    return "non-adjacent";
+    return "";
 };
 
 export default ({
@@ -229,30 +221,37 @@ export default ({
             </div>
             <h1>TEST</h1>
             <Link to="/">Home</Link>
-            <ul
-                style={{
-                    position: "absolute",
-                }}
-            >
-                {items.map((x, idx) => {
-                    return (
-                        <li
-                            key={idx}
-                            className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)} ${getItemStyles(idx, currentFocus, items, testItems)}`}
-                            style={{
-                                width: "max-content",
-                                position: "absolute",
-                                backgroundColor:
-                                    idx === currentFocus
-                                        ? "coral"
-                                        : "lightblue",
-                            }}
-                        >
-                            {x.name}
-                        </li>
-                    );
-                })}
-            </ul>
+            <div>
+                <ul
+                    className="x-items"
+                    style={{
+                        position: "absolute",
+                    }}
+                >
+                    {items.map((x, idx) => {
+                        // ${getItemStyles(idx, currentFocus, items, testItems)}
+                        return (
+                            <li
+                                key={idx}
+                                className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)}
+                                 ${idx === currentFocus ? "selected" : ""}
+                                 ${willoopStyles(idx, currentFocus, items, testItems)}
+                                 `}
+                                style={{
+                                    width: "max-content",
+                                    position: "absolute",
+                                    backgroundColor:
+                                        idx === currentFocus
+                                            ? "coral"
+                                            : "lightblue",
+                                }}
+                            >
+                                {x.name}
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
         </>
     );
 };
