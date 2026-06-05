@@ -61,16 +61,16 @@ const testItems = [
 ];
 
 const keyDownHandler =
-    (currFocus: number, setFocused: Function, items: any[]) => (ev: any) => {
+    (currFocus: number, setFocused: Function, list: any[]) => (ev: any) => {
         ev.preventDefault();
         if (ev.code === "ArrowLeft" || ev.code === "ArrowUp") {
             const nextFocus = currFocus - 1;
-            const willoop = nextFocus < 3;
-            setFocused(willoop ? items.length - 5 : nextFocus);
+            const willoop = nextFocus < 0;
+            setFocused(willoop ? list.length - 1 : nextFocus);
         } else if (ev.code === "ArrowRight" || ev.code === "ArrowDown") {
             const nextFocus = currFocus + 1;
-            const willoop = nextFocus > items.length - 4;
-            setFocused(willoop ? 4 : nextFocus);
+            const willoop = nextFocus > list.length - 1;
+            setFocused(willoop ? 0 : nextFocus);
         }
         console.log(ev.code);
     };
@@ -98,19 +98,11 @@ const getKeyFrameAnim = (
     return "";
 };
 
-const willoopStyles = (
-    idx: number,
-    current_focus: number,
-    items_splice: any[],
-    items: any[],
-) => {
-    if (current_focus === 3 && idx === current_focus + (items.length - 1)) {
+const willoopStyles = (idx: number, current_focus: number, items: any[]) => {
+    if (current_focus === 0 && idx === items.length - 1) {
         return "loop l";
     }
-    if (
-        current_focus === items_splice.length - 4 &&
-        idx === current_focus - (items.length - 1)
-    ) {
+    if (current_focus === items.length - 1 && idx === 0) {
         return "loop r";
     }
 
@@ -126,9 +118,9 @@ export default ({
 }: Props) => {
     const limitRate = useRateLimit();
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
-    const [items, _setItems] = useState([...testItems, ...testItems]);
-    const [previousFocus, setPreviousFocus] = useState(testItems.length);
-    const [currentFocus, setCurrentFocus] = useState(testItems.length);
+    const [items, _setItems] = useState(testItems);
+    const [previousFocus, setPreviousFocus] = useState(Math.floor(testItems.length / 2));
+    const [currentFocus, setCurrentFocus] = useState(previousFocus);
     const setFocused = (next_focus: number) => {
         setPreviousFocus(
             next_focus - currentFocus > 1
@@ -137,7 +129,6 @@ export default ({
                   ? next_focus - 1
                   : currentFocus,
         );
-        console.log("looped left ", next_focus - currentFocus > 1);
 
         setCurrentFocus(next_focus);
         document.getElementById(`${next_focus}`)?.scrollIntoView({
@@ -178,9 +169,9 @@ export default ({
                 moveY(gamepad, "LEFT_STICK") < 0 - deadzone
             ) {
                 const nextFocus = currentFocus - 1;
-                const willoop = nextFocus < 3;
+                const willoop = nextFocus < 0;
                 limitRate(
-                    () => setFocused(willoop ? items.length - 5 : nextFocus),
+                    () => setFocused(willoop ? items.length - 1 : nextFocus),
                     250,
                 );
             } else if (
@@ -188,11 +179,30 @@ export default ({
                 moveY(gamepad, "LEFT_STICK") > 0 + deadzone
             ) {
                 const nextFocus = currentFocus + 1;
-                const willoop = nextFocus > items.length - 4;
-                limitRate(() => setFocused(willoop ? 4 : nextFocus), 250);
+                const willoop = nextFocus > items.length - 1;
+                limitRate(() => setFocused(willoop ? 0 : nextFocus), 250);
             }
         }
     });
+
+    // prevent list from getting bounds issues
+    // split list
+    // floor value
+    // slice from index floor val
+    // take original list and slice on index 0 up to its split floor val
+    // combine with first list slice
+    /*
+    > let list = [1,2,3,4,5];
+    > let list_s1 = list.slice(Math.floor(list.length / 2));
+    > list_s1
+    [ 3, 4, 5 ]
+    > let list_s2 = list.slice(0, Math.floor(list.length / 2))
+    > list_s2
+    [ 1, 2 ]
+    > [...list_s1, ...list_s2]
+    [ 3, 4, 5, 1, 2 ]
+    >
+    */
 
     return (
         <>
@@ -235,7 +245,7 @@ export default ({
                                 key={idx}
                                 className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)}
                                  ${idx === currentFocus ? "selected" : ""}
-                                 ${willoopStyles(idx, currentFocus, items, testItems)}
+                                 ${willoopStyles(idx, currentFocus, items)}
                                  `}
                                 style={{
                                     width: "max-content",
