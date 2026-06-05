@@ -61,16 +61,26 @@ const testItems = [
 ];
 
 const keyDownHandler =
-    (currFocus: number, setFocused: Function, list: any[]) => (ev: any) => {
+    (
+        currFocus: number,
+        setFocused: Function,
+        list: any[],
+        padded_list: any[],
+    ) =>
+    (ev: any) => {
         ev.preventDefault();
+        const list_threshold = list.length > 3 ? 3 : list.length;
         if (ev.code === "ArrowLeft" || ev.code === "ArrowUp") {
             const nextFocus = currFocus - 1;
-            const willoop = nextFocus < 0;
-            setFocused(willoop ? list.length - 1 : nextFocus);
+            const willoop = nextFocus < list_threshold;
+            setFocused(
+                willoop ? padded_list.length - (list_threshold + 1) : nextFocus,
+            );
         } else if (ev.code === "ArrowRight" || ev.code === "ArrowDown") {
             const nextFocus = currFocus + 1;
-            const willoop = nextFocus > list.length - 1;
-            setFocused(willoop ? 0 : nextFocus);
+            const willoop =
+                nextFocus > padded_list.length - (list_threshold + 1);
+            setFocused(willoop ? list_threshold : nextFocus);
         }
         console.log(ev.code);
     };
@@ -98,15 +108,25 @@ const getKeyFrameAnim = (
     return "";
 };
 
-const willoopStyles = (idx: number, current_focus: number, items: any[]) => {
-    if (current_focus === 0 && idx === items.length - 1) {
-        return "loop l";
+const willoopStyles = (
+    idx: number,
+    current_focus: number,
+    list: any[],
+    padded_list: any[],
+) => {
+    const list_threshold = list.length > 3 ? 3 : list.length;
+    let classes = "";
+    if (current_focus === list_threshold && idx === padded_list.length - (list_threshold + 1)) {
+        classes = "loop l";
     }
-    if (current_focus === items.length - 1 && idx === 0) {
-        return "loop r";
+    if (
+        current_focus === padded_list.length - (list_threshold + 1) &&
+        idx === 3
+    ) {
+        classes = "loop r";
     }
 
-    return "";
+    return classes;
 };
 
 export default ({
@@ -118,8 +138,14 @@ export default ({
 }: Props) => {
     const limitRate = useRateLimit();
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
-    const [items, _setItems] = useState(testItems);
-    const [previousFocus, setPreviousFocus] = useState(Math.floor(testItems.length / 2));
+    const [items, _setItems] = useState([
+        ...testItems.slice(-3),
+        ...testItems,
+        ...testItems.slice(0, 3),
+    ]);
+    const [previousFocus, setPreviousFocus] = useState(
+        Math.floor(items.length / 2),
+    );
     const [currentFocus, setCurrentFocus] = useState(previousFocus);
     const setFocused = (next_focus: number) => {
         setPreviousFocus(
@@ -148,7 +174,9 @@ export default ({
     //         behavior: "smooth",
     //     });
     // };
-    const navHandler = useRef(keyDownHandler(currentFocus, setFocused, items));
+    const navHandler = useRef(
+        keyDownHandler(currentFocus, setFocused, testItems, items),
+    );
 
     useEffect(() => {
         return () => {
@@ -158,7 +186,12 @@ export default ({
 
     useEffect(() => {
         window.removeEventListener("keydown", navHandler.current);
-        navHandler.current = keyDownHandler(currentFocus, setFocused, items);
+        navHandler.current = keyDownHandler(
+            currentFocus,
+            setFocused,
+            testItems,
+            items,
+        );
         window.addEventListener("keydown", navHandler.current);
     }, [currentFocus]);
 
@@ -244,8 +277,8 @@ export default ({
                             <li
                                 key={idx}
                                 className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)}
-                                 ${idx === currentFocus ? "selected" : ""}
-                                 ${willoopStyles(idx, currentFocus, items)}
+                            ${idx === currentFocus ? "selected" : ""}
+                            ${willoopStyles(idx, currentFocus, testItems, items)}
                                  `}
                                 style={{
                                     width: "max-content",
