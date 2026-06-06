@@ -281,7 +281,7 @@ export default ({
                             <li
                                 key={idx}
                                 className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)}
-                            ${idx === currentFocus ? "selected" : ""}
+                            ${idx === currentFocus ? `selected${currentFocus > previousFocus ? " r" : currentFocus < previousFocus ? " l" : ""}` : ""}
                             ${willoopStyles(idx, currentFocus, testItems, items)}
                                  `}
                                 style={{

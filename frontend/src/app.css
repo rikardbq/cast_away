@@ -2,7 +2,7 @@
     font-family: "FetteUnzFraktur";
     src:
         local("FetteUnzFraktur"),
-        url(./fonts/fette-unz-fraktur.ttf) format("truetype");
+        url(../fette-unz-fraktur.ttf) format("truetype");
     /* other formats include: 'woff2', 'truetype, 'opentype',
                             'embedded-opentype', and 'svg' */
 }
@@ -24,6 +24,11 @@
     text-align: center;
 }
 
+@keyframes selected-animation {
+    to {
+        --translate-y: 0px;
+    }
+}
 @keyframes left-1-animation {
     to {
         --translate-y: -64px;
@@ -84,13 +89,19 @@
 }
 
 .selected {
-    transition:
-        scale 2s var(--animation-bounce),
-        opacity 0.25s ease-out,
-        transform 2s var(--animation-bounce);
-    transform: scale(1.75) translate3d(0px, 0px, 0px);
+    --translate-y: 0px;
+    transition: opacity 0.25s ease-out;
+    transform: scale(1.75) translate3d(0px, var(--translate-y), 0px);
     transform-origin: left;
     opacity: 1;
+    &.r {
+        --translate-y: 64px;
+        animation: selected-animation 0.2s var(--animation-bounce) forwards;
+    }
+    &.l {
+        --translate-y: -64px;
+        animation: selected-animation 0.2s var(--animation-bounce) forwards;
+    }
     /* &:has(+ .left-1) {
         opacity: 0.5;
         color: orange;
@@ -101,25 +112,25 @@
     } */
 }
 
-.loop {
+/* .loop {
     &.r {
         transform: translate3d(0px, 64px, 0px);
     }
     &.l {
         transform: translate3d(0px, -64px, 0px);
     }
-}
+} */
 
 .left-1 {
     --translate-y: -64px;
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 0px;
-        animation: left-1-animation 2s var(--animation-bounce) forwards;
+        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -128px;
-        animation: left-1-animation 2s var(--animation-bounce) forwards;
+        animation: left-1-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
@@ -128,11 +139,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: -64px;
-        animation: left-2-animation 2s var(--animation-bounce) forwards;
+        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -192px;
-        animation: left-2-animation 2s var(--animation-bounce) forwards;
+        animation: left-2-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
@@ -141,11 +152,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: -128px;
-        animation: left-3-animation 2s var(--animation-bounce) forwards;
+        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: -256px;
-        animation: left-3-animation 2s var(--animation-bounce) forwards;
+        animation: left-3-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
@@ -154,11 +165,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 128px;
-        animation: right-1-animation 2s var(--animation-bounce) forwards;
+        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 0px;
-        animation: right-1-animation 2s var(--animation-bounce) forwards;
+        animation: right-1-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
@@ -167,11 +178,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 192px;
-        animation: right-2-animation 2s var(--animation-bounce) forwards;
+        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 64px;
-        animation: right-2-animation 2s var(--animation-bounce) forwards;
+        animation: right-2-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
@@ -180,11 +191,11 @@
     transform: translate3d(0px, var(--translate-y), 0px);
     &.r {
         --translate-y: 256px;
-        animation: right-3-animation 2s var(--animation-bounce) forwards;
+        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
         --translate-y: 128px;
-        animation: right-3-animation 2s var(--animation-bounce) forwards;
+        animation: right-3-animation 0.2s var(--animation-bounce) forwards;
     }
 }
 
