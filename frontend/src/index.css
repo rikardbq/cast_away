@@ -1,13 +1,16 @@
 @import "tailwindcss";
 @plugin "daisyui" {
+    themes: light --default, mys --prefersdark, all;
+};
+ /* {
   themes: nord --default, abyss --prefersdark, cupcake, dracula;
-}
+} */
 
 /* themes start */
 @plugin "daisyui/theme" {
   name: "mys";
   default: false;
-  prefersdark: false;
+  prefersdark: true;
   color-scheme: "dark";
   --color-base-100: oklch(28% 0.109 3.907);
   --color-base-200: oklch(40% 0.153 2.432);
