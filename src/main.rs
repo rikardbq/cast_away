@@ -30,8 +30,9 @@ async fn stream_handler(path: web::Path<String>) -> impl Responder {
 
 async fn idle() -> actix_web::Result<impl Responder> {
     Ok(NamedFile::open(format!(
-        "{}/{}/idle.webp",
+        "{}/{}/{}/idle.webp",
         get_application_root_dir().to_string_lossy(),
+        ASSETS_ROOT_DIR,
         "media"
     ))?
     .use_etag(false)

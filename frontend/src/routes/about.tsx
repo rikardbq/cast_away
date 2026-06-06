@@ -5,22 +5,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRateLimit } from "../hooks/useRateLimit";
 import type { GamepadUtils } from "../hooks/useGamepad";
 
-const ListItem = ({ id, name, description: _, focused, ...rest }: any) => {
-    return (
-        <li id={id} {...rest}>
-            <div
-                className={`transition-all duration-150 ease-in-out min-w-40 min-h-40 ${focused ? "scale-125 border-primary rounded-xl shadow-[0px_0px_20px_5px_rgba(0,0,0,0.25)] shadow-primary" : "shadow-md rounded-lg border-transparent"}`}
-                // style={{
-                //     width: "500px",
-                //     height: "500px",
-                //     border: focused ? "2px solid green" : "",
-                // }}
-            >
-                {name}
-            </div>
-        </li>
-    );
-};
+// const ListItem = ({ id, name, description: _, focused, ...rest }: any) => {
+//     return (
+//         <li id={id} {...rest}>
+//             <div
+//                 className={`transition-all duration-150 ease-in-out min-w-40 min-h-40 ${focused ? "scale-125 border-primary rounded-xl shadow-[0px_0px_20px_5px_rgba(0,0,0,0.25)] shadow-primary" : "shadow-md rounded-lg border-transparent"}`}
+//                 // style={{
+//                 //     width: "500px",
+//                 //     height: "500px",
+//                 //     border: focused ? "2px solid green" : "",
+//                 // }}
+//             >
+//                 {name}
+//             </div>
+//         </li>
+//     );
+// };
 
 const testItems = [
     {
@@ -55,6 +55,11 @@ const testItems = [
     },
     {
         name: "Viaplay",
+        desc: "aaaaaaaaaa",
+        focused: false,
+    },
+    {
+        name: "chromecast",
         desc: "aaaaaaaaaa",
         focused: false,
     },
@@ -139,6 +144,7 @@ export default ({
         stick: { moveX: _moveX, moveY, deadzone },
     },
 }: Props) => {
+    const [focusedElem, _setFocusedElem] = useState("back_btn");
     const limitRate = useRateLimit();
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
     const [items, _setItems] = useState([
@@ -241,38 +247,36 @@ export default ({
     */
 
     return (
-        <>
-            <div>
-                <ul
-                    style={{
-                        display: "flex",
-                        flexDirection: gamepad?.buttons[0]?.pressed
-                            ? "column"
-                            : "row",
-                        gap: "5px",
-                    }}
-                >
-                    {items.map((x, idx) => (
-                        <ListItem
-                            onClick={() => {
-                                setFocused(idx);
-                            }}
-                            id={idx}
-                            key={`${x.name}:${idx}`}
-                            name={x.name}
-                            focused={idx === currentFocus}
-                        />
-                    ))}
-                </ul>
-            </div>
-            <h1>TEST</h1>
-            <Link to="/">Home</Link>
-            <div>
+        <div
+            style={{
+                height: "100vh",
+                width: "100vw",
+                background: "url(../wp.jpg)",
+            }}
+        >
+            <div
+                style={{
+                    height: "100vh",
+                    width: "100vw",
+                    backgroundImage:
+                        "linear-gradient(to right, black 25%, transparent 100%)",
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                }}
+            />
+            <div
+                style={{
+                    alignContent: "center",
+                    height: "100vh",
+                    position: "absolute",
+                    left: "15vw",
+                }}
+            >
                 <ul
                     className="x-items"
                     style={{
-                        position: "absolute",
-                        fontFamily: "FetteUnzFraktur",
+                        lineHeight: "normal",
                     }}
                 >
                     {items.map((x, idx) => {
@@ -287,10 +291,9 @@ export default ({
                                 style={{
                                     width: "max-content",
                                     position: "absolute",
-                                    backgroundColor:
-                                        idx === currentFocus
-                                            ? "coral"
-                                            : "lightblue",
+                                    fontFamily: x.name === "chromecast" ? "Cyberpunk" : "FetteUnzFraktur",
+                                    fontSize: "42px",
+                                    color: x.name === "chromecast" ? "#ffff44" : "#FF4444",
                                 }}
                             >
                                 {x.name.toLowerCase()}
@@ -299,6 +302,28 @@ export default ({
                     })}
                 </ul>
             </div>
-        </>
+            <div>
+                <Link
+                    style={{
+                        fontFamily: "FetteUnzFraktur",
+                        color: "#FF4444",
+                        fontSize: "42px",
+                        lineHeight: "normal",
+                        borderRadius: "10px",
+                        padding: "4px 16px",
+                        border:
+                            focusedElem === "back_btn"
+                                ? "2px solid #dddddd"
+                                : "none",
+                    }}
+                    className="absolute bottom-5 left-8 hover-3d"
+                    to="/"
+                >
+                    back
+                </Link>
+                {/* <div className="btn btn-error">
+                </div> */}
+            </div>
+        </div>
     );
 };

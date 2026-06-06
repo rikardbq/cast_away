@@ -1,3 +1,8 @@
+### colors
+    - black #0A0A0A
+    - red #FF4444
+    - yellow #FFFF44
+
 ### Notes to self (RUST)
 
 - TAURI

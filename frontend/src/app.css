@@ -2,13 +2,14 @@
     font-family: "FetteUnzFraktur";
     src:
         local("FetteUnzFraktur"),
-        url(../fette-unz-fraktur.ttf) format("truetype");
-    /* other formats include: 'woff2', 'truetype, 'opentype',
-                            'embedded-opentype', and 'svg' */
+        url(../font/fette-unz-fraktur.ttf) format("truetype");
 }
 
-:root {
-    --animation-bounce: cubic-bezier(0.14, 0.91, 0.41, 1.32);
+@font-face {
+    font-family: "Cyberpunk";
+    src:
+        local("Cyberpunk"),
+        url(../font/cyberpunk.ttf) format("truetype");
 }
 
 @property --translate-y {
@@ -17,11 +18,15 @@
     initial-value: 0px;
 }
 
+@property --scale {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 1;
+}
+
 #root {
-    max-width: 1280px;
     margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
+    padding: 0;
 }
 
 @keyframes selected-animation {
@@ -31,6 +36,7 @@
 }
 @keyframes left-1-animation {
     to {
+        --scale: 1.25;
         --translate-y: -64px;
     }
 }
@@ -46,6 +52,7 @@
 }
 @keyframes right-1-animation {
     to {
+        --scale: 1.25;
         --translate-y: 64px;
     }
 }
@@ -69,28 +76,28 @@
         opacity: 1;
     }
     > li.left-1 {
-        opacity: 0.5;
+        opacity: 0.35;
     }
     > li.left-2 {
-        opacity: 0.2;
+        opacity: 0.15;
     }
     > li.left-3 {
-        opacity: 0.1;
+        opacity: 0.05;
     }
     > li.right-1 {
-        opacity: 0.5;
+        opacity: 0.35;
     }
     > li.right-2 {
-        opacity: 0.2;
+        opacity: 0.15;
     }
     > li.right-3 {
-        opacity: 0.1;
+        opacity: 0.05;
     }
 }
 
 .selected {
     --translate-y: 0px;
-    transition: opacity 0.25s ease-out;
+    transition: opacity 0.4s ease-out;
     transform: scale(1.75) translate3d(0px, var(--translate-y), 0px);
     transform-origin: left;
     opacity: 1;
@@ -122,13 +129,17 @@
 } */
 
 .left-1 {
+    --scale: 1.25;
     --translate-y: -64px;
-    transform: translate3d(0px, var(--translate-y), 0px);
+    transform: scale(var(--scale)) translate3d(0px, var(--translate-y), 0px);
+    transform-origin: left;
     &.r {
+        --scale: 1.75;
         --translate-y: 0px;
         animation: left-1-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
+        --scale: 1;
         --translate-y: -128px;
         animation: left-1-animation 0.2s var(--animation-bounce) forwards;
     }
@@ -161,13 +172,17 @@
 }
 
 .right-1 {
+    --scale: 1.25;
     --translate-y: 64px;
-    transform: translate3d(0px, var(--translate-y), 0px);
+    transform: scale(var(--scale)) translate3d(0px, var(--translate-y), 0px);
+    transform-origin: left;
     &.r {
+        --scale: 1;
         --translate-y: 128px;
         animation: right-1-animation 0.2s var(--animation-bounce) forwards;
     }
     &.l {
+        --scale: 1.75;
         --translate-y: 0px;
         animation: right-1-animation 0.2s var(--animation-bounce) forwards;
     }
