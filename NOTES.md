@@ -2,6 +2,7 @@
     - black #0A0A0A
     - red #FF4444
     - yellow #FFFF44
+    - glow effect on text `text-shadow: -1px -1px 19px #ff4, 1px -1px 9px #ff4, -1px 1px 0px #fff, 1px 1px 0px #fff;`
 
 ### Notes to self (RUST)
 

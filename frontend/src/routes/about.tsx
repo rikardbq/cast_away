@@ -144,8 +144,9 @@ export default ({
         stick: { moveX: _moveX, moveY, deadzone },
     },
 }: Props) => {
-    const [focusedElem, _setFocusedElem] = useState("back_btn");
     const limitRate = useRateLimit();
+    const vendorSelect = useRef("");
+    const [focusedElem, _setFocusedElem] = useState("back_btn");
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
     const [items, _setItems] = useState([
         ...testItems.slice(-3),
@@ -252,6 +253,8 @@ export default ({
                 height: "100vh",
                 width: "100vw",
                 background: "url(../wp.jpg)",
+                display: "flex",
+                flexDirection: "row",
             }}
         >
             <div
@@ -267,10 +270,10 @@ export default ({
             />
             <div
                 style={{
-                    alignContent: "center",
+                    placeContent: "center",
+                    placeItems: "center",
                     height: "100vh",
-                    position: "absolute",
-                    left: "15vw",
+                    width: "40vw",
                 }}
             >
                 <ul
@@ -281,6 +284,18 @@ export default ({
                 >
                     {items.map((x, idx) => {
                         // ${getItemStyles(idx, currentFocus, items, testItems)}
+                        let fontFamily = "FetteUnzFraktur";
+                        let textColor = "#FF4444";
+                        if (x.name === "chromecast") {
+                            fontFamily = "Cyberpunk";
+                            textColor = "#ffff44";
+                            // change this later, possible this location causes the jank
+                            if (idx === currentFocus) {
+                                vendorSelect.current = "chromecast_select.webp";
+                            } else {
+                                vendorSelect.current = "";
+                            }
+                        }
                         return (
                             <li
                                 key={idx}
@@ -291,9 +306,9 @@ export default ({
                                 style={{
                                     width: "max-content",
                                     position: "absolute",
-                                    fontFamily: x.name === "chromecast" ? "Cyberpunk" : "FetteUnzFraktur",
+                                    fontFamily,
                                     fontSize: "42px",
-                                    color: x.name === "chromecast" ? "#ffff44" : "#FF4444",
+                                    color: textColor,
                                 }}
                             >
                                 {x.name.toLowerCase()}
@@ -302,6 +317,21 @@ export default ({
                     })}
                 </ul>
             </div>
+            {vendorSelect.current.length > 0 ? (
+                <div
+                    style={{
+                        placeContent: "center",
+                        zIndex: 1,
+                    }}
+                >
+                    <img
+                        src={`../vendor/${vendorSelect.current}`}
+                        style={{
+                            width: "60vw",
+                        }}
+                    />
+                </div>
+            ) : null}
             <div>
                 <Link
                     style={{
