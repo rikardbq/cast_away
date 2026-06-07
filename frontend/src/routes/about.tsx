@@ -27,41 +27,49 @@ const testItems = [
         name: "Paramount+",
         desc: "Halo",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "Netflix",
         desc: "description",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "N chill",
         desc: "description 2 chill 2",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "HBO",
         desc: "description 3",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "PRIME",
         desc: "description 7",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "Apple TV",
         desc: "description apple",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "Viaplay",
         desc: "aaaaaaaaaa",
         focused: false,
+        vendor_image: "",
     },
     {
         name: "chromecast",
         desc: "aaaaaaaaaa",
         focused: false,
+        vendor_image: "../vendor/chromecast_select.webp",
     },
 ];
 
@@ -322,13 +330,13 @@ export default ({
                     style={{
                         placeContent: "center",
                         zIndex: 1,
+                        overflow: "hidden",
+                        width: "60vw",
                     }}
                 >
                     <img
                         src={`../vendor/${vendorSelect.current}`}
-                        style={{
-                            width: "60vw",
-                        }}
+                        className="vendor-select-slide-in"
                     />
                 </div>
             ) : null}
