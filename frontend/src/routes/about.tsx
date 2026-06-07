@@ -27,49 +27,43 @@ const testItems = [
         name: "Paramount+",
         desc: "Halo",
         focused: false,
-        vendor_image: "",
+        vendor: "paramount",
     },
     {
         name: "Netflix",
         desc: "description",
         focused: false,
-        vendor_image: "",
-    },
-    {
-        name: "N chill",
-        desc: "description 2 chill 2",
-        focused: false,
-        vendor_image: "",
+        vendor: "netflix",
     },
     {
         name: "HBO",
         desc: "description 3",
         focused: false,
-        vendor_image: "",
+        vendor: "hbo",
     },
     {
         name: "PRIME",
         desc: "description 7",
         focused: false,
-        vendor_image: "",
+        vendor: "prime",
     },
     {
         name: "Apple TV",
         desc: "description apple",
         focused: false,
-        vendor_image: "",
+        vendor: "appletv",
     },
     {
         name: "Viaplay",
         desc: "aaaaaaaaaa",
         focused: false,
-        vendor_image: "",
+        vendor: "viaplay",
     },
     {
         name: "chromecast",
         desc: "aaaaaaaaaa",
         focused: false,
-        vendor_image: "../vendor/chromecast_select.webp",
+        vendor: "chromecast",
     },
 ];
 
@@ -153,7 +147,6 @@ export default ({
     },
 }: Props) => {
     const limitRate = useRateLimit();
-    const vendorSelect = useRef("");
     const [focusedElem, _setFocusedElem] = useState("back_btn");
     const gamepad = useMemo(() => gamepads[0], [gamepads]);
     const [items, _setItems] = useState([
@@ -161,24 +154,34 @@ export default ({
         ...testItems,
         ...testItems.slice(0, 3),
     ]);
-    const [previousFocus, setPreviousFocus] = useState(
-        Math.floor(items.length / 2),
-    );
-    const [currentFocus, setCurrentFocus] = useState(previousFocus);
+    const [previousFocus, setPreviousFocus] = useState({
+        idx: Math.floor(items.length / 2),
+        vendor: items[Math.floor(items.length / 2)].vendor,
+    });
+    const [currentFocus, setCurrentFocus] = useState({
+        idx: previousFocus.idx,
+        vendor: previousFocus.vendor,
+    });
     const setFocused = (next_focus: number) => {
-        setPreviousFocus(
-            next_focus - currentFocus > 1
+        const pfocus =
+            next_focus - currentFocus.idx > 1
                 ? next_focus + 1
-                : next_focus - currentFocus < -1
+                : next_focus - currentFocus.idx < -1
                   ? next_focus - 1
-                  : currentFocus,
-        );
+                  : currentFocus.idx;
+        setPreviousFocus({
+            idx: pfocus,
+            vendor: items[pfocus].vendor,
+        });
 
-        setCurrentFocus(next_focus);
+        setCurrentFocus({ idx: next_focus, vendor: items[next_focus].vendor });
         document.getElementById(`${next_focus}`)?.scrollIntoView({
             behavior: "smooth",
         });
     };
+    const [_vendorImage, setVendorImage] = useState<
+        (React.JSX.Element | null)[]
+    >([]);
     // const setFocused = (idx: number) => {
     //     setPreviousFocus(currentFocus);
     //     setCurrentFocus(idx);
@@ -193,10 +196,20 @@ export default ({
     //     });
     // };
     const navHandler = useRef(
-        keyDownHandler(currentFocus, setFocused, testItems, items),
+        keyDownHandler(currentFocus.idx, setFocused, testItems, items),
     );
 
     useEffect(() => {
+        setVendorImage(
+            items.map((x) =>
+                currentFocus.vendor === x.vendor ? (
+                    <img
+                        src={`../vendor/${x.vendor}_select.webp`}
+                        className="vendor-image-select-slide-in"
+                    />
+                ) : null,
+            ),
+        );
         return () => {
             window.removeEventListener("keydown", navHandler.current);
         };
@@ -205,12 +218,22 @@ export default ({
     useEffect(() => {
         window.removeEventListener("keydown", navHandler.current);
         navHandler.current = keyDownHandler(
-            currentFocus,
+            currentFocus.idx,
             setFocused,
             testItems,
             items,
         );
         window.addEventListener("keydown", navHandler.current);
+        setVendorImage(
+            items.map((x) =>
+                currentFocus.vendor === x.vendor ? (
+                    <img
+                        src={`../vendor/${x.vendor}_select.webp`}
+                        className="vendor-image-select-slide-in"
+                    />
+                ) : null,
+            ),
+        );
     }, [currentFocus]);
 
     useEffect(() => {
@@ -219,7 +242,7 @@ export default ({
                 isButtonPressed(gamepad, "XBOX.DPAD_UP") ||
                 moveY(gamepad, "LEFT_STICK") < 0 - deadzone
             ) {
-                const nextFocus = currentFocus - 1;
+                const nextFocus = currentFocus.idx - 1;
                 const willoop = nextFocus < 0;
                 limitRate(
                     () => setFocused(willoop ? items.length - 1 : nextFocus),
@@ -229,7 +252,7 @@ export default ({
                 isButtonPressed(gamepad, "XBOX.DPAD_DOWN") ||
                 moveY(gamepad, "LEFT_STICK") > 0 + deadzone
             ) {
-                const nextFocus = currentFocus + 1;
+                const nextFocus = currentFocus.idx + 1;
                 const willoop = nextFocus > items.length - 1;
                 limitRate(() => setFocused(willoop ? 0 : nextFocus), 250);
             }
@@ -261,8 +284,9 @@ export default ({
                 height: "100vh",
                 width: "100vw",
                 background: "url(../wp.jpg)",
-                display: "flex",
-                flexDirection: "row",
+                // display: "flex",
+                // flexDirection: "row",
+                overflow: "hidden",
             }}
         >
             <div
@@ -276,70 +300,44 @@ export default ({
                     top: 0,
                 }}
             />
-            <div
-                style={{
-                    placeContent: "center",
-                    placeItems: "center",
-                    height: "100vh",
-                    width: "40vw",
-                }}
-            >
-                <ul
-                    className="x-items"
-                    style={{
-                        lineHeight: "normal",
-                    }}
-                >
-                    {items.map((x, idx) => {
-                        // ${getItemStyles(idx, currentFocus, items, testItems)}
-                        let fontFamily = "FetteUnzFraktur";
-                        let textColor = "#FF4444";
-                        if (x.name === "chromecast") {
-                            fontFamily = "Cyberpunk";
-                            textColor = "#ffff44";
-                            // change this later, possible this location causes the jank
-                            if (idx === currentFocus) {
-                                vendorSelect.current = "chromecast_select.webp";
-                            } else {
-                                vendorSelect.current = "";
-                            }
-                        }
-                        return (
-                            <li
-                                key={idx}
-                                className={`${getKeyFrameAnim(idx, currentFocus, previousFocus)}
-                            ${idx === currentFocus ? `selected${currentFocus > previousFocus ? " r" : currentFocus < previousFocus ? " l" : ""}` : ""}
-                            ${willoopStyles(idx, currentFocus, testItems, items)}
+            <div className="x-items h-screen content-center absolute">
+                {items.map((x, idx) => {
+                    let fontFamily = "FetteUnzFraktur";
+                    let textColor = "#FF4444";
+                    if (x.name === "chromecast") {
+                        fontFamily = "Cyberpunk";
+                        textColor = "#ffff44";
+                    }
+                    return (
+                        <div key={x.vendor} className="w-full fixed">
+                            <div
+                                className={`w-max ${getKeyFrameAnim(idx, currentFocus.idx, previousFocus.idx)}
+                            ${idx === currentFocus.idx ? `selected${currentFocus.idx > previousFocus.idx ? " r" : currentFocus.idx < previousFocus.idx ? " l" : ""}` : ""}
+                            ${willoopStyles(idx, currentFocus.idx, testItems, items)}
                                  `}
                                 style={{
-                                    width: "max-content",
-                                    position: "absolute",
+                                    lineHeight: "normal",
+                                    marginLeft: "18vw",
+                                    // position: "absolute",
                                     fontFamily,
                                     fontSize: "42px",
                                     color: textColor,
                                 }}
                             >
                                 {x.name.toLowerCase()}
-                            </li>
-                        );
-                    })}
-                </ul>
+                            </div>
+                            <img
+                                src={`../vendor/${x.vendor}_select.webp`}
+                                className={`absolute self-center place-content-center vendor-image${currentFocus.idx === idx ? " vendor-image-select-slide-in" : ""}`}
+                                style={{
+                                    height: "60vh",
+                                    right: "12vw",
+                                }}
+                            />
+                        </div>
+                    );
+                })}
             </div>
-            {vendorSelect.current.length > 0 ? (
-                <div
-                    style={{
-                        placeContent: "center",
-                        zIndex: 1,
-                        overflow: "hidden",
-                        width: "60vw",
-                    }}
-                >
-                    <img
-                        src={`../vendor/${vendorSelect.current}`}
-                        className="vendor-select-slide-in"
-                    />
-                </div>
-            ) : null}
             <div>
                 <Link
                     style={{
