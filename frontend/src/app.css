@@ -319,7 +319,7 @@
 .glitch-effect {
     animation-composition: add;
     animation:
-        glitch-wiggle-periodic 10s infinite 0.2s,
+        glitch-wiggle-periodic 9s infinite 0.2s,
         glitch-wiggle-periodic 15s infinite 0.2s;
 }
 
