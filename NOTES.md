@@ -1,3 +1,79 @@
+### Glitch effect CSS
+```css
+@import url(https://fonts.googleapis.com/css?family=Abril+Fatface|Roboto:400,400italic,500,500italic);
+
+@-webkit-keyframes wiggle {
+    0% { -webkit-transform: skewX(24deg); } 
+    10% { -webkit-transform: skewX(-8deg); }
+    20% { 
+      -webkit-transform: skewX(55deg);
+      text-shadow:1px 1px rgba(246, 0, 153,0.8),
+             -1px -1px rgba(15, 210, 255,0.8),
+             -1px 0px rgba(255, 210, 0, 1);
+    }
+    30% { -webkit-transform: skewX(-90deg); }
+    40% { 
+      -webkit-transform: skewX(29deg);
+      filter: blur(1px);
+    }
+    50% { 
+      -webkit-transform: skewX(-90deg);
+      text-shadow:20px 7px rgba(255, 76, 76, 0.8),
+             -28px 0px rgba(54, 91, 255, 0.8),
+             22px -4px rgba(255, 210, 0, 1);
+    }
+    60% { -webkit-transform: skewX(3deg); }
+    70% { 
+      -webkit-transform: skewX(-2deg);
+      text-shadow:1px 1px rgba(246, 0, 153,0.8),
+             -1px -1px rgba(15, 210, 255,0.8),
+             -1px 0px rgba(255, 210, 0, 1);
+    }
+    80% { -webkit-transform: skewX(1deg); }
+    90% { -webkit-transform: skewX(10deg); }
+    100% { -webkit-transform: skewX(0deg); }
+}
+
+* {padding:0;margin:0;}
+
+html {width:100%;height:100%;}
+
+body { 
+  width:100%;
+  height:100%;
+  background:#111;
+  color:#fff;
+  font-family:'Roboto',sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+header {
+  display:flex;
+}
+
+header:hover {
+  -webkit-animation: wiggle 0.4s 3;
+}
+
+h1 {
+  position:relative;
+  font-family:sans-serif;
+  font-weight:normal;
+  font-size:1em;
+  text-align:center;
+  cursor:pointer;
+  color:rgba(255,255,255,0.95);
+}
+
+h1:hover {
+  -webkit-animation: wiggle 0.2s 2;
+
+}
+```
+
 ### colors
     - black #0A0A0A
     - red #FF4444
