@@ -42,7 +42,7 @@
 }
 
 .vendor-image-select-slide-in {
-    transition: opacity 0.75s linear 0.2s, transform 1s var(--animation-slide) 0.2s;
+    transition: opacity 0.3s linear 0.2s, transform 0.5s var(--animation-slide) 0.2s;
     opacity: 1;
     transform: translate3d(0px, 0px, 0px);
     /* animation: vendor-image-slide-in 1s var(--animation-slide) forwards 0.2s; */

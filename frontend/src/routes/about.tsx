@@ -280,27 +280,19 @@ export default ({
 
     return (
         <div
+            className="h-lvh w-lvw bg-no-repeat bg-cover overflow-hidden"
             style={{
-                height: "100vh",
-                width: "100vw",
                 background: "url(../wp.jpg)",
-                // display: "flex",
-                // flexDirection: "row",
-                overflow: "hidden",
             }}
         >
             <div
+                className="h-full w-full absolute bg-no-repeat left-0 top-0"
                 style={{
-                    height: "100vh",
-                    width: "100vw",
                     backgroundImage:
                         "linear-gradient(to right, black 25%, transparent 100%)",
-                    position: "absolute",
-                    left: 0,
-                    top: 0,
                 }}
             />
-            <div className="x-items h-screen content-center absolute">
+            <div className="x-items h-screen content-center">
                 {items.map((x, idx) => {
                     let fontFamily = "FetteUnzFraktur";
                     let textColor = "#FF4444";
@@ -309,18 +301,14 @@ export default ({
                         textColor = "#ffff44";
                     }
                     return (
-                        <div key={x.vendor} className="w-full fixed">
+                        <div key={x.vendor}>
                             <div
-                                className={`w-max ${getKeyFrameAnim(idx, currentFocus.idx, previousFocus.idx)}
+                                className={`text-3xl left-1/5 fixed w-max ${getKeyFrameAnim(idx, currentFocus.idx, previousFocus.idx)}
                             ${idx === currentFocus.idx ? `selected${currentFocus.idx > previousFocus.idx ? " r" : currentFocus.idx < previousFocus.idx ? " l" : ""}` : ""}
                             ${willoopStyles(idx, currentFocus.idx, testItems, items)}
                                  `}
                                 style={{
-                                    lineHeight: "normal",
-                                    marginLeft: "18vw",
-                                    // position: "absolute",
                                     fontFamily,
-                                    fontSize: "42px",
                                     color: textColor,
                                 }}
                             >
@@ -328,11 +316,7 @@ export default ({
                             </div>
                             <img
                                 src={`../vendor/${x.vendor}_select.webp`}
-                                className={`absolute self-center place-content-center vendor-image${currentFocus.idx === idx ? " vendor-image-select-slide-in" : ""}`}
-                                style={{
-                                    height: "60vh",
-                                    right: "12vw",
-                                }}
+                                className={`h-3/4 right-1/12 fixed self-center place-content-center vendor-image${currentFocus.idx === idx ? " vendor-image-select-slide-in" : ""}`}
                             />
                         </div>
                     );
@@ -343,7 +327,7 @@ export default ({
                     style={{
                         fontFamily: "FetteUnzFraktur",
                         color: "#FF4444",
-                        fontSize: "42px",
+                        fontSize: "2rem",
                         lineHeight: "normal",
                         borderRadius: "10px",
                         padding: "4px 16px",
