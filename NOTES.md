@@ -25,9 +25,9 @@
     60% { -webkit-transform: skewX(3deg); }
     70% { 
       -webkit-transform: skewX(-2deg);
-      text-shadow:1px 1px rgba(246, 0, 153,0.8),
-             -1px -1px rgba(15, 210, 255,0.8),
-             -1px 0px rgba(255, 210, 0, 1);
+      text-shadow:-4px 1px rgba(246, 0, 153,0.8),
+             2px -1px rgba(15, 210, 255,0.8),
+             -3px 0px rgba(255, 210, 0, 1);
     }
     80% { -webkit-transform: skewX(1deg); }
     90% { -webkit-transform: skewX(10deg); }

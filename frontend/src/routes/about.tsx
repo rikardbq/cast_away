@@ -303,16 +303,21 @@ export default ({
                     return (
                         <div key={x.vendor}>
                             <div
-                                className={`text-3xl left-1/5 fixed w-max ${getKeyFrameAnim(idx, currentFocus.idx, previousFocus.idx)}
-                            ${idx === currentFocus.idx ? `selected${currentFocus.idx > previousFocus.idx ? " r" : currentFocus.idx < previousFocus.idx ? " l" : ""}` : ""}
-                            ${willoopStyles(idx, currentFocus.idx, testItems, items)}
-                                 `}
+                                className={`text-3xl left-1/5 fixed w-max ${getKeyFrameAnim(idx, currentFocus.idx, previousFocus.idx)}${idx === currentFocus.idx ? ` selected${currentFocus.idx > previousFocus.idx ? " r" : currentFocus.idx < previousFocus.idx ? " l" : ""}` : ""} ${willoopStyles(idx, currentFocus.idx, testItems, items)}`}
                                 style={{
                                     fontFamily,
                                     color: textColor,
                                 }}
                             >
-                                {x.name.toLowerCase()}
+                                <div
+                                    className={
+                                        currentFocus.vendor === "chromecast" && idx === currentFocus.idx
+                                            ? "glitch-effect"
+                                            : ""
+                                    }
+                                >
+                                    {x.name.toLowerCase()}
+                                </div>
                             </div>
                             <img
                                 src={`../vendor/${x.vendor}_select.webp`}
