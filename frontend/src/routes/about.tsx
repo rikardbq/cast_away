@@ -311,8 +311,9 @@ export default ({
                             >
                                 <div
                                     className={
-                                        currentFocus.vendor === "chromecast" && idx === currentFocus.idx
-                                            ? "glitch-effect"
+                                        currentFocus.vendor === "chromecast" && 
+                                        idx === currentFocus.idx
+                                            ? "glitch-effect-periodic"
                                             : ""
                                     }
                                 >
