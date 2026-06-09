@@ -36,10 +36,7 @@
     20% {
         filter: blur(1px);
         transform: skewX(55deg);
-        text-shadow:
-            1px 1px rgba(246, 0, 153, 0.8),
-            -1px -1px rgba(15, 210, 255, 0.8),
-            -1px 0px rgba(255, 210, 0, 1);
+        text-shadow: var(--text-shadow-chromatic-aberration-cmy-1)
     }
     30% {
         transform: skewX(-90deg);
@@ -50,10 +47,7 @@
     50% {
         filter: blur(1px);
         transform: skewX(-91deg);
-        text-shadow:
-            23px 6px 0px rgba(250, 96, 96, 0.8),
-            -18px 0px 2px rgba(105, 132, 255, 0.8),
-            18px -3px 2px rgb(198, 255, 112);
+        text-shadow: var(--text-shadow-chromatic-aberration-rgb-1)
     }
     60% {
         transform: skewX(3deg);
@@ -62,10 +56,7 @@
         transform: skewX(-2deg);
     }
     80% {
-        text-shadow:
-            -4px 1px rgba(246, 0, 153, 0.8),
-            -1px -1px rgba(15, 210, 255, 0.8),
-            -3px 0px rgba(255, 210, 0, 1);
+        text-shadow: var(--text-shadow-chromatic-aberration-cmy-2);
         transform: skewX(1deg);
     }
     90% {
@@ -73,6 +64,130 @@
         transform: skewX(10deg);
     }
     100% {
+        transform: skewX(0deg);
+    }
+}
+
+@keyframes glitch-wiggle-2 {
+    0% {
+        transform: skewX(24deg);
+    }
+    4% {
+        transform: skewX(-8deg);
+    }
+    8% {
+        transform: skewX(55deg);
+        text-shadow:
+            1px 1px rgba(246, 0, 153, 0.8),
+            -1px -1px rgba(15, 210, 255, 0.8),
+            -1px 0px rgba(255, 210, 0, 1);
+    }
+    12% {
+        transform: skewX(-90deg);
+    }
+    16% {
+        transform: skewX(29deg);
+        filter: blur(1px);
+    }
+    20% {
+        transform: skewX(-90deg);
+        text-shadow:
+            20px 7px 0px rgba(255, 76, 76, 0.8),
+            -28px 0px 2px rgba(54, 91, 255, 0.8),
+            22px -4px 0px rgba(255, 210, 0, 1);
+    }
+    24% {
+        transform: skewX(3deg);
+    }
+    28% {
+        transform: skewX(-2deg);
+        text-shadow:
+            -4px 1px rgba(246, 0, 153, 0.8),
+            2px -1px rgba(15, 210, 255, 0.8),
+            -3px 0px rgba(255, 210, 0, 1);
+    }
+    32% {
+        transform: skewX(1deg);
+    }
+    36% {
+        transform: skewX(10deg);
+    }
+    40% {
+        filter: blur(0px);
+        transform: skewX(0deg);
+    }
+    44% {
+        transform: skewX(24deg);
+    }
+    48% {
+        transform: skewX(-8deg);
+    }
+    52% {
+        filter: blur(1.25px);
+        transform: skewX(55deg);
+        text-shadow:
+            1px 1px rgba(246, 0, 153, 2.8),
+            -1px -1px rgba(15, 210, 255, 2.8),
+            -1px 0px rgba(255, 210, 0, 1);
+    }
+    56% {
+        transform: skewX(91deg);
+    }
+    60% {
+        transform: skewX(29deg);
+    }
+    64% {
+        transform: skewX(0px);
+        text-shadow:
+            20px 7px rgba(255, 76, 76, 0.8),
+            -8px 0px rgba(54, 91, 255, 0.8),
+            22px -4px rgba(255, 210, 0, 1);
+    }
+    68% {
+        transform: skewX(-91deg);
+    }
+    72% {
+        transform: skewX(-2deg);
+        text-shadow:
+            -4px 1px rgba(246, 0, 153, 0.8),
+            2px -1px rgba(15, 210, 255, 0.8),
+            -3px 0px rgba(255, 210, 0, 1);
+    }
+    76% {
+        filter: blur(0px);
+        transform: skewX(1deg);
+    }
+    80% {
+        transform: skewX(10deg);
+    }
+    84% {
+        text-shadow: none;
+        transform: skewX(0deg);
+    }
+    88% {
+        filter: blur(1.25px);
+        transform: skewX(-90deg);
+        text-shadow:
+            18px 8px 0px rgba(250, 96, 96, 0.8),
+            -15px 0px 2px rgba(86, 213, 255, 0.8),
+            20px -4px 2px rgb(198, 255, 112);
+    }
+    92% {
+        transform: skewX(3deg);
+    }
+    96% {
+        transform: skewX(-2deg);
+        text-shadow:
+            -4px 1px rgba(246, 0, 153, 0.8),
+            2px -1px rgba(15, 210, 255, 0.8),
+            -3px 0px rgba(255, 210, 0, 1);
+    }
+    98% {
+        transform: skewX(10deg);
+    }
+    100% {
+        filter: blur(0px);
+        text-shadow: none;
         transform: skewX(0deg);
     }
 }
@@ -317,10 +432,16 @@
 }
 
 .glitch-effect {
-    /* animation-composition: add; */
     animation:
         glitch-wiggle 0.2s 0.2s 3,
         glitch-wiggle 0.5s 0.2s 1;
+}
+
+.glitch-effect-2 {
+    animation-composition: add;
+    animation:
+        glitch-wiggle-2 0.2s 0.2s 2,
+        glitch-wiggle-2 0.4s 0.2s 2;
 }
 
 .glitch-effect-periodic {
